@@ -6,7 +6,7 @@
     <title>Painel Gerencial de Despesas</title>
     
     <meta property="og:title" content="Painel Gerencial de Despesas - Grupo">
-    <meta property="og:description" content="Dashboard e relatório executivo interativo de despesas.">
+    <meta property="og:description" content="Dashboard e relatório interativo de despesas.">
     <meta property="og:image" content="favicon.png">
     <meta property="og:type" content="website">
     <link rel="icon" href="favicon.png" type="image/png">
@@ -50,8 +50,8 @@
             <div class="flex items-center">
                 <img src="logo.png" alt="Logo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-2xl font-bold">Gestão de Despesas do Grupo</h1>
-                    <p class="text-slate-500 text-sm mt-1">Ambiente seguro de preenchimento e geração de relatórios.</p>
+                    <h1 class="text-2xl font-bold">Principais Despesas do Grupo</h1>
+                    <p class="text-slate-500 text-sm mt-1">Ambiente de geração de relatórios.</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@
             <div class="tabs-nav no-print flex border-b border-slate-300 mb-6 bg-white rounded-t-lg px-4 pt-2 overflow-x-auto">
                 <button onclick="switchTab('analise')" id="btn-tab-analise" class="tab-btn active whitespace-nowrap">Análise do Período</button>
                 <button onclick="switchTab('comparativo')" id="btn-tab-comparativo" class="tab-btn whitespace-nowrap">Análise Comparativa</button>
-                <button onclick="switchTab('projecao')" id="btn-tab-projecao" class="tab-btn whitespace-nowrap">Inteligência e Projeções</button>
+                <button onclick="switchTab('projecao')" id="btn-tab-projecao" class="tab-btn whitespace-nowrap">Projeções</button>
             </div>
 
             <!-- ABA 1: Análise do Período -->
@@ -202,9 +202,9 @@
                     <div class="relative h-80"><canvas id="compChart"></canvas></div>
                 </div>
 
-                <!-- Gráfico de Comparação Anualizada por Rubrica -->
+                <!-- Gráfico de Comparação Anualizada -->
                 <div class="card mb-8 print-page-break">
-                    <h3 class="text-md font-bold mb-1">Custo Anualizado por Rubrica (R$)</h3>
+                    <h3 class="text-md font-bold mb-1">Custo Anualizado (R$)</h3>
                     <p class="text-xs text-slate-500 mb-4">Projeta o gasto de cada despesa individual para 12 meses, revelando o impacto a longo prazo de cada linha.</p>
                     <div class="relative h-80"><canvas id="compAnualItemChart"></canvas></div>
                 </div>
