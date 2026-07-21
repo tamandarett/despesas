@@ -155,6 +155,11 @@
                     </div>
                 </div>
 
+                <!-- ALERTA DE PROJEÇÃO ANUAL -->
+                <div id="aviso-projecao-comp" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Aviso: Um ou ambos os períodos selecionados possuem menos de 12 meses. A comparação anual exibida abaixo é uma projeção baseada no ritmo de gastos (Run Rate).
+                </div>
+
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 print-page-break">
                     <div class="card p-4 text-center">
                         <h4 class="text-xs font-bold text-slate-500 mb-2">Alimentação (R$/Func)</h4>
@@ -190,10 +195,25 @@
                     </div>
                 </div>
 
+                <!-- Gráfico de Comparação Mensal -->
                 <div class="card mb-8">
                     <h3 class="text-md font-bold mb-1">Custo Médio Mensal (R$)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Compara o valor absoluto gasto por mês, permitindo a comparação justa entre semestres e anos fechados.</p>
+                    <p class="text-xs text-slate-500 mb-4">Compara o valor absoluto gasto por mês nas rubricas, nivelando as operações de diferentes tamanhos temporais.</p>
                     <div class="relative h-80"><canvas id="compChart"></canvas></div>
+                </div>
+
+                <!-- Gráfico de Comparação Anualizada por Rubrica -->
+                <div class="card mb-8 print-page-break">
+                    <h3 class="text-md font-bold mb-1">Custo Anualizado por Rubrica (R$)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Projeta o gasto de cada despesa individual para 12 meses, revelando o impacto a longo prazo de cada linha.</p>
+                    <div class="relative h-80"><canvas id="compAnualItemChart"></canvas></div>
+                </div>
+
+                <!-- Gráfico de Comparação Anualizada Total -->
+                <div class="card mb-8 print-page-break">
+                    <h3 class="text-md font-bold mb-1">Impacto Anualizado da Operação (R$)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Compara o custo financeiro total anualizado (Alimentação + Combustível + Manutenção + Brindes) em ambas as seleções.</p>
+                    <div class="relative h-80"><canvas id="compAnualChart"></canvas></div>
                 </div>
             </div>
 
@@ -266,7 +286,6 @@
 
         try { if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); } catch(e) {}
 
-        // ================= FUNÇÃO DE PROTEÇÃO (Evita travamentos por innerText nulo) =================
         function setText(id, text) {
             const el = document.getElementById(id);
             if(el) el.innerText = text;
@@ -572,11 +591,19 @@
             const m1 = p1.meses || 1;
             const m2 = p2.meses || 1;
 
-            const data1 = [ ef1.alim/m1, ef1.comb/m1, ef1.manut/m1, ef1.brindes/m1 ];
-            const data2 = [ ef2.alim/m2, ef2.comb/m2, ef2.manut/m2, ef2.brindes/m2 ];
-
             const lbl1 = `${l1} (${p1.nome})`;
             const lbl2 = `${l2} (${p2.nome})`;
+
+            // Aviso de Projeção Anualizada
+            const elAviso = document.getElementById('aviso-projecao-comp');
+            if (elAviso) {
+                if (m1 < 12 || m2 < 12) elAviso.classList.remove('hidden');
+                else elAviso.classList.add('hidden');
+            }
+
+            // Gráfico Mensal
+            const data1 = [ ef1.alim/m1, ef1.comb/m1, ef1.manut/m1, ef1.brindes/m1 ];
+            const data2 = [ ef2.alim/m2, ef2.comb/m2, ef2.manut/m2, ef2.brindes/m2 ];
 
             if(charts['compChart']) charts['compChart'].destroy();
             charts['compChart'] = new Chart(document.getElementById('compChart').getContext('2d'), {
@@ -586,6 +613,51 @@
                     datasets: [
                         { label: lbl1, data: data1, backgroundColor: colors.blue, borderRadius: 4 },
                         { label: lbl2, data: data2, backgroundColor: colors.red, borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
+                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
+                }
+            });
+
+            // Gráfico Anualizado por Rubrica
+            const dataAnualItem1 = [ (ef1.alim/m1)*12, (ef1.comb/m1)*12, (ef1.manut/m1)*12, (ef1.brindes/m1)*12 ];
+            const dataAnualItem2 = [ (ef2.alim/m2)*12, (ef2.comb/m2)*12, (ef2.manut/m2)*12, (ef2.brindes/m2)*12 ];
+
+            if(charts['compAnualItemChart']) charts['compAnualItemChart'].destroy();
+            charts['compAnualItemChart'] = new Chart(document.getElementById('compAnualItemChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Alimentação', 'Combustível + Viagem', 'Manutenção', 'Brindes'],
+                    datasets: [
+                        { label: lbl1, data: dataAnualItem1, backgroundColor: colors.blue, borderRadius: 4 },
+                        { label: lbl2, data: dataAnualItem2, backgroundColor: colors.red, borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
+                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
+                }
+            });
+
+            // Gráfico Anualizado Total
+            const totalMensal1 = (ef1.alim + ef1.comb + ef1.manut + ef1.brindes) / m1;
+            const totalMensal2 = (ef2.alim + ef2.comb + ef2.manut + ef2.brindes) / m2;
+
+            const anual1 = totalMensal1 * 12;
+            const anual2 = totalMensal2 * 12;
+
+            if(charts['compAnualChart']) charts['compAnualChart'].destroy();
+            charts['compAnualChart'] = new Chart(document.getElementById('compAnualChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Custo Total Anualizado da Operação'],
+                    datasets: [
+                        { label: lbl1, data: [anual1], backgroundColor: colors.blue, borderRadius: 4 },
+                        { label: lbl2, data: [anual2], backgroundColor: colors.red, borderRadius: 4 }
                     ]
                 },
                 options: {
@@ -662,9 +734,9 @@
             if (db.periodos.length === 0) return;
             renderCache = calcularMétricasGlobais();
             
-            const p = getPeriodoAtual();
-            if(!p) return;
-            const pNome = p.nome;
+            const selectorElement = document.getElementById('select-period');
+            if(!selectorElement) return;
+            const pNome = selectorElement.options[selectorElement.selectedIndex].text;
             
             const pData = renderCache.dadosPorPeriodo[pNome];
             const grp = renderCache.grupo[pNome];
