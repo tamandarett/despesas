@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Gerencial de Despesas</title>
     
-    <!-- Metatags para pré-visualização no WhatsApp e Redes Sociais -->
     <meta property="og:title" content="Painel Gerencial de Despesas - Grupo">
     <meta property="og:description" content="Dashboard e relatório executivo interativo de despesas.">
     <meta property="og:image" content="favicon.png">
     <meta property="og:type" content="website">
-    
-    <!-- Favicon -->
     <link rel="icon" href="favicon.png" type="image/png">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,41 +21,23 @@
         .input-cell { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; outline: none; }
         .input-cell:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         
-        /* Estilos específicos para a impressão do PDF */
+        .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .tab-btn:hover { color: #1e293b; }
+        .tab-btn.active { border-bottom-color: #3b82f6; color: #2563eb; }
+        
         @media print {
             body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            
-            /* Regra de Ouro: Evita que os cards sejam cortados ao meio */
-            .card { 
-                box-shadow: none !important; 
-                border: 1px solid #cbd5e1 !important; 
-                break-inside: avoid !important; 
-                page-break-inside: avoid !important; 
-                margin-bottom: 24px !important; 
-                display: block !important;
-            }
-
-            /* KPIs formatados para não ocupar a página toda */
-            .kpi-container { 
-                display: grid !important; 
-                grid-template-columns: 1fr 1fr !important; 
-                gap: 16px !important; 
-                margin-bottom: 24px !important;
-            }
-
-            /* Os gráficos ficam 1 embaixo do outro no PDF. Fim da sobreposição! */
-            .print-charts-container { display: block !important; }
-            .print-charts-container > .card { width: 100% !important; }
-            
-            /* Padroniza a altura para caberem perfeitamente na folha A4 */
-            .relative.h-64, .relative.h-80 { height: 280px !important; }
-
-            /* Força nova página na evolução histórica */
+            .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 24px !important; display: block !important; width: 100% !important; }
+            .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
+            .print-charts-container { display: block !important; width: 100% !important; }
+            .print-charts-container > .card { width: 100% !important; display: block !important; }
+            .relative.h-64, .relative.h-80, .relative.h-96 { height: 280px !important; width: 100% !important; }
+            canvas { max-width: 100% !important; max-height: 100% !important; width: 100% !important; height: 100% !important; object-fit: contain; }
             .print-page-break { page-break-before: always !important; break-before: page !important; padding-top: 20px; border-top: none !important; }
             
+            #tab-analise, #tab-comparativo, #tab-projecao { display: block !important; }
+            .tabs-nav { display: none !important; }
             @page { size: A4 portrait; margin: 10mm; }
-            
-            /* Oculta tudo que não deve sair na folha - Deve ficar no final! */
             .no-print { display: none !important; }
         }
     </style>
@@ -66,13 +45,13 @@
 <body class="p-4 md:p-6">
     <div class="max-w-7xl mx-auto space-y-6">
         
-        <!-- Header & Controles Globais (Escondido no PDF) -->
+        <!-- Header Principal -->
         <div class="no-print flex flex-col lg:flex-row justify-between items-center bg-white text-slate-800 border border-slate-200 rounded-lg p-6 shadow-md gap-4">
             <div class="flex items-center">
-                <img src="logo.png" alt="Logo do Grupo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
+                <img src="logo.png" alt="Logo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-2xl font-bold">Acompanhamento de Principais Despesas</h1>
-                    <p class="text-slate-500 text-sm mt-1">Ambiente de preenchimento e geração de relatórios.</p>
+                    <h1 class="text-2xl font-bold">Gestão de Despesas do Grupo</h1>
+                    <p class="text-slate-500 text-sm mt-1">Ambiente seguro de preenchimento e geração de relatórios.</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -81,42 +60,33 @@
                     <i class="fas fa-upload mr-1"></i> Importar
                     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importarJSON(event)">
                 </label>
-                <button onclick="window.print()" class="bg-blue-600 text-white hover:bg-blue-500 px-3 py-2 rounded text-sm font-bold transition ml-2"><i class="fas fa-file-pdf mr-1"></i> Exportar PDF</button>
+                <button onclick="prepararEImprimirPDF()" class="bg-blue-600 text-white hover:bg-blue-500 px-3 py-2 rounded text-sm font-bold transition ml-2"><i class="fas fa-file-pdf mr-1"></i> Exportar PDF</button>
                 <button onclick="exportarHTMLDashboard()" class="bg-emerald-600 text-white hover:bg-emerald-500 px-3 py-2 rounded text-sm font-bold transition"><i class="fas fa-file-code mr-1"></i> Exportar Dashboard (HTML)</button>
             </div>
         </div>
 
-        <!-- Área de Gestão de Dados (Escondido no PDF) -->
+        <!-- Área de Gestão de Dados -->
         <div class="no-print card space-y-4 border-t-4 border-t-blue-500">
             <div class="flex justify-between items-center border-b pb-4">
                 <h2 class="text-xl font-bold text-slate-800">Entrada de Dados Brutos</h2>
                 <div class="flex gap-2 items-center">
-                    <select id="select-period" class="border border-slate-300 rounded px-3 py-1" onchange="carregarFormularioAtual()"></select>
+                    <select id="select-period" class="border border-slate-300 rounded px-3 py-1 bg-white" onchange="carregarFormularioAtual()"></select>
                     <button onclick="abrirModalNovoPeriodo()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded font-semibold transition"><i class="fas fa-plus"></i> Novo Período</button>
                     <button onclick="excluirPeriodo()" class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded font-semibold transition"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-
-            <div id="area-vazia" class="text-center py-8 text-slate-500 hidden">
-                Nenhum período criado. Clique em "Novo Período" para começar.
-            </div>
-
+            <div id="area-vazia" class="text-center py-8 text-slate-500 hidden">Nenhum período criado. Clique em "Novo Período" para começar.</div>
             <div id="area-formulario" class="overflow-x-auto">
                 <table class="w-full text-sm text-left border-collapse">
                     <thead class="bg-slate-100 text-slate-700">
                         <tr>
-                            <th class="p-2 border">Loja</th>
-                            <th class="p-2 border">Nº Func.</th>
-                            <th class="p-2 border">Faturamento Total (R$)</th>
-                            <th class="p-2 border">Alimentação Total (R$)</th>
-                            <th class="p-2 border">Combustível (R$)</th>
-                            <th class="p-2 border">Manutenção (R$)</th>
-                            <th class="p-2 border">Brindes (R$)</th>
+                            <th class="p-2 border">Loja</th><th class="p-2 border text-center">Nº Func.</th><th class="p-2 border">Faturamento</th>
+                            <th class="p-2 border text-blue-800">Alimentação</th><th class="p-2 border text-blue-800">Caju (VR)</th>
+                            <th class="p-2 border text-amber-800">Combustível</th><th class="p-2 border text-amber-800">Viagem</th>
+                            <th class="p-2 border">Manutenção</th><th class="p-2 border">Brindes</th>
                         </tr>
                     </thead>
-                    <tbody id="tabela-dados">
-                        <!-- Tabela gerada via JS -->
-                    </tbody>
+                    <tbody id="tabela-dados"></tbody>
                 </table>
                 <div class="mt-4 flex justify-end">
                     <button onclick="salvarDados()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 transition"><i class="fas fa-save mr-2"></i>Salvar e Atualizar Gráficos</button>
@@ -124,88 +94,152 @@
             </div>
         </div>
 
-        <!-- DASHBOARD VISUAL (Visível na tela e no PDF) -->
         <div id="dashboard-container" class="hidden">
-            
-            <!-- Cabeçalho do PDF (Com Logo) -->
+            <!-- Cabeçalho do PDF -->
             <div class="hidden print:flex border-b-2 border-slate-800 pb-4 mb-6 items-center">
                 <img src="logo.png" alt="Logo" class="h-12 w-auto mr-4" onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-2xl font-bold">Relatório de Exceções e Despesas</h1>
+                    <h1 class="text-2xl font-bold">Relatório Executivo Analítico</h1>
                     <p class="text-slate-500 font-semibold" id="pdf-period-title"></p>
                 </div>
             </div>
 
-            <div class="kpi-container grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="card bg-blue-50 border-blue-200">
-                    <p class="text-xs font-semibold text-blue-800">Média Alim. Mensal/Func.</p>
-                    <h3 class="text-xl font-bold text-blue-900 mt-1" id="kpi-alim">--</h3>
+            <!-- Navegação de Abas -->
+            <div class="tabs-nav no-print flex border-b border-slate-300 mb-6 bg-white rounded-t-lg px-4 pt-2 overflow-x-auto">
+                <button onclick="switchTab('analise')" id="btn-tab-analise" class="tab-btn active whitespace-nowrap">Análise do Período</button>
+                <button onclick="switchTab('comparativo')" id="btn-tab-comparativo" class="tab-btn whitespace-nowrap">Análise Comparativa</button>
+                <button onclick="switchTab('projecao')" id="btn-tab-projecao" class="tab-btn whitespace-nowrap">Inteligência e Projeções</button>
+            </div>
+
+            <!-- ABA 1: Análise do Período -->
+            <div id="tab-analise">
+                <div class="kpi-container grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card bg-blue-50 border-blue-200"><p class="text-xs font-semibold text-blue-800">Média Alim. Mensal/Func.</p><h3 class="text-xl font-bold text-blue-900 mt-1" id="kpi-alim">--</h3></div>
+                    <div class="card bg-amber-50 border-amber-200"><p class="text-xs font-semibold text-amber-800" id="lbl-kpi-comb">Média Combustível</p><h3 class="text-xl font-bold text-amber-900 mt-1" id="kpi-comb">--</h3></div>
+                    <div class="card bg-rose-50 border-rose-200"><p class="text-xs font-semibold text-rose-800">Média Manutenção</p><h3 class="text-xl font-bold text-rose-900 mt-1" id="kpi-manut">--</h3></div>
+                    <div class="card bg-emerald-50 border-emerald-200"><p class="text-xs font-semibold text-emerald-800">Média Brindes</p><h3 class="text-xl font-bold text-emerald-900 mt-1" id="kpi-brindes">--</h3></div>
                 </div>
-                <div class="card bg-amber-50 border-amber-200">
-                    <p class="text-xs font-semibold text-amber-800">Média Combustível</p>
-                    <h3 class="text-xl font-bold text-amber-900 mt-1" id="kpi-comb">--</h3>
+
+                <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="card"><h3 class="text-md font-bold mb-1">Desvio: Alimentação Geral Mensal</h3><p class="text-xs text-slate-500 mb-4">Diferença para a "Média Permitida" (R$). Negativo = Acima.</p><div class="relative h-64"><canvas id="devAlimChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-1">Gasto: Alimentação Geral Mensal (R$/Func)</h3><p class="text-xs text-slate-500 mb-4">Valor por funcionário ao mês. Linha indica média.</p><div class="relative h-64"><canvas id="barAlimChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-1" id="lbl-chart-comb">Combustível</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barCombChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-1">Manutenção de Veículo</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barManutChart"></canvas></div></div>
+                    <div class="card print-full"><h3 class="text-md font-bold mb-1">Brindes</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barBrindesChart"></canvas></div></div>
                 </div>
-                <div class="card bg-rose-50 border-rose-200">
-                    <p class="text-xs font-semibold text-rose-800">Média Manutenção</p>
-                    <h3 class="text-xl font-bold text-rose-900 mt-1" id="kpi-manut">--</h3>
-                </div>
-                <div class="card bg-emerald-50 border-emerald-200">
-                    <p class="text-xs font-semibold text-emerald-800">Média Brindes</p>
-                    <h3 class="text-xl font-bold text-emerald-900 mt-1" id="kpi-brindes">--</h3>
+
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica</h2>
+                <div class="print-charts-container grid grid-cols-1 gap-8">
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Alimentação Mensal / Func. (R$)</h3><div class="relative h-80"><canvas id="evoAlimChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-4" id="lbl-evo-comb">Evolução: Combustível (%)</h3><div class="relative h-80"><canvas id="evoCombChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Manutenção de Veículo (%)</h3><div class="relative h-80"><canvas id="evoManutChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Brindes (%)</h3><div class="relative h-80"><canvas id="evoBrindesChart"></canvas></div></div>
                 </div>
             </div>
 
-            <h2 class="text-xl font-bold text-slate-700 mb-4 border-b pb-2">Análise do Período Atual</h2>
-            
-            <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div class="card">
-                    <h3 class="text-md font-bold mb-1">Desvio: Alimentação Geral Mensal</h3>
-                    <p class="text-xs text-slate-500 mb-4">Diferença para a "Média Permitida" (R$). Negativo = Acima da média.</p>
-                    <div class="relative h-64"><canvas id="devAlimChart"></canvas></div>
+            <!-- ABA 2: Análise Comparativa -->
+            <div id="tab-comparativo" class="hidden">
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mb-4 border-b pb-2">Análise Comparativa Direta (A vs B)</h2>
+                
+                <div class="no-print bg-white p-4 rounded border mb-6 flex flex-wrap gap-4 items-center justify-center lg:justify-start">
+                    <div class="flex items-center gap-2 lg:border-r pr-4">
+                        <span class="font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded">A</span>
+                        <select id="comp-loja-1" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                        <select id="comp-periodo-1" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                    </div>
+                    <div class="flex items-center gap-2 font-bold text-slate-400">VERSUS</div>
+                    <div class="flex items-center gap-2 lg:pl-4">
+                        <span class="font-bold text-red-600 bg-red-100 px-2 py-1 rounded">B</span>
+                        <select id="comp-loja-2" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                        <select id="comp-periodo-2" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-1">Gasto: Alimentação Geral Mensal (R$/Func)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Valor por funcionário ao mês. Linha indica a média do grupo.</p>
-                    <div class="relative h-64"><canvas id="barAlimChart"></canvas></div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 print-page-break">
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Alimentação (R$/Func)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-alim-1">--</div>
+                            <div class="text-slate-300 text-xs mx-2">vs</div>
+                            <div class="text-red-500 font-bold text-lg" id="comp-alim-2">--</div>
+                        </div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Combustível + Viagem (% Fat)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-comb-1">--</div>
+                            <div class="text-slate-300 text-xs mx-2">vs</div>
+                            <div class="text-red-500 font-bold text-lg" id="comp-comb-2">--</div>
+                        </div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Manutenção (% Fat)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-man-1">--</div>
+                            <div class="text-slate-300 text-xs mx-2">vs</div>
+                            <div class="text-red-500 font-bold text-lg" id="comp-man-2">--</div>
+                        </div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Brindes (% Fat)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-bri-1">--</div>
+                            <div class="text-slate-300 text-xs mx-2">vs</div>
+                            <div class="text-red-500 font-bold text-lg" id="comp-bri-2">--</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-1">Combustível</h3>
-                    <p class="text-xs text-slate-500 mb-4">% do Faturamento total no período. Linha indica média.</p>
-                    <div class="relative h-64"><canvas id="barCombChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-1">Manutenção de Veículo</h3>
-                    <p class="text-xs text-slate-500 mb-4">% do Faturamento total no período. Linha indica média.</p>
-                    <div class="relative h-64"><canvas id="barManutChart"></canvas></div>
-                </div>
-                <div class="card print-full">
-                    <h3 class="text-md font-bold mb-1">Brindes</h3>
-                    <p class="text-xs text-slate-500 mb-4">% do Faturamento total no período. Linha indica média.</p>
-                    <div class="relative h-64"><canvas id="barBrindesChart"></canvas></div>
+
+                <div class="card mb-8">
+                    <h3 class="text-md font-bold mb-1">Custo Médio Mensal (R$)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Compara o valor absoluto gasto por mês, permitindo a comparação justa entre semestres e anos fechados.</p>
+                    <div class="relative h-80"><canvas id="compChart"></canvas></div>
                 </div>
             </div>
 
-            <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica (Todos os Períodos)</h2>
-            <div class="print-charts-container grid grid-cols-1 gap-8">
-                <div class="card">
-                    <h3 class="text-md font-bold mb-4">Evolução: Alimentação Geral Mensal / Funcionário (R$)</h3>
-                    <div class="relative h-80"><canvas id="evoAlimChart"></canvas></div>
+            <!-- ABA 3: Projeções (Run Rate) -->
+            <div id="tab-projecao" class="hidden">
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mb-4 border-b pb-2">Projeção Anual de Fechamento (Run Rate)</h2>
+                
+                <div class="no-print bg-white p-4 rounded border mb-6 flex gap-4 items-center">
+                    <label class="text-sm font-semibold">Projetar base do período:</label>
+                    <select id="proj-base" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaProjecoes()"></select>
+                    <label class="text-sm font-semibold ml-4">Comparar contra o período:</label>
+                    <select id="proj-compare" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaProjecoes()"></select>
                 </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-4">Evolução: Combustível (%)</h3>
-                    <div class="relative h-80"><canvas id="evoCombChart"></canvas></div>
+
+                <div id="aviso-viagem" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Atenção: Um dos períodos selecionados não inclui Despesas de Viagem no cálculo de combustível. A rubrica comparativa será afetada.
                 </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-4">Evolução: Manutenção de Veículo (%)</h3>
-                    <div class="relative h-80"><canvas id="evoManutChart"></canvas></div>
+
+                <div class="card mb-8 print-page-break">
+                    <h3 class="text-md font-bold mb-1">Variação Projetada Consolidada: Custo Total (R$)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Calcula a tendência anual (Todas as Despesas) do período base e subtrai da comparação. <span class="text-red-500 font-bold">Vermelho = Excesso.</span></p>
+                    <div class="relative h-80"><canvas id="projTotalChart"></canvas></div>
                 </div>
-                <div class="card">
-                    <h3 class="text-md font-bold mb-4">Evolução: Brindes (%)</h3>
-                    <div class="relative h-80"><canvas id="evoBrindesChart"></canvas></div>
+
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Projeções Individuais por Despesa</h2>
+                <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1">Variação Projetada: Alimentação (R$)</h3>
+                        <div class="relative h-64"><canvas id="projAlimChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1" id="lbl-proj-comb">Variação Projetada: Combustível (R$)</h3>
+                        <div class="relative h-64"><canvas id="projCombChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1">Variação Projetada: Manutenção (R$)</h3>
+                        <div class="relative h-64"><canvas id="projManutChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1">Variação Projetada: Brindes (R$)</h3>
+                        <div class="relative h-64"><canvas id="projBrindesChart"></canvas></div>
+                    </div>
                 </div>
             </div>
+
         </div>
-
     </div>
 
     <!-- Modal Novo Período -->
@@ -214,10 +248,8 @@
             <h3 class="text-lg font-bold mb-4">Adicionar Novo Período</h3>
             <label class="block text-sm font-semibold mb-1">Nome (Ex: Ano 2026, 1º Semestre 2027)</label>
             <input type="text" id="novo-nome" class="w-full border rounded p-2 mb-4">
-            
             <label class="block text-sm font-semibold mb-1">Duração (Meses)</label>
             <input type="number" id="novo-meses" class="w-full border rounded p-2 mb-6" value="6" min="1" max="12">
-            
             <div class="flex justify-end gap-2">
                 <button onclick="fecharModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Cancelar</button>
                 <button onclick="criarPeriodo()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Criar</button>
@@ -225,30 +257,128 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE LÓGICA E CÁLCULO -->
     <script>
         const LOJAS = ["Morada", "Visconde", "Paula Leite", "Salto", "Vinhedo", "Conceição", "Itu", "Elias Fausto", "Maria José"];
         let db = { periodos: [] };
-        
         let charts = {};
-        const colors = { blue: '#3b82f6', red: '#ef4444', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
+        let renderCache = null;
+        const colors = { blue: '#3b82f6', red: '#ef4444', green: '#10b981', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
 
-        // ==========================================
-        // 1. INICIALIZAÇÃO E GESTÃO DE DADOS (CRUD)
-        // ==========================================
+        try { if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); } catch(e) {}
+
+        // ================= FUNÇÃO DE PROTEÇÃO (Evita travamentos por innerText nulo) =================
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if(el) el.innerText = text;
+        }
+
         function init() {
             const saved = localStorage.getItem('gestaoDespesasDB');
-            if (saved) { db = JSON.parse(saved); }
+            if (saved) {
+                db = JSON.parse(saved);
+                if(db.periodos) {
+                    db.periodos.forEach(p => {
+                        if(p.id) p.id = String(p.id);
+                        if(p.nome) p.nome = String(p.nome);
+                    });
+                }
+            }
+            
+            const cL1 = document.getElementById('comp-loja-1');
+            const cL2 = document.getElementById('comp-loja-2');
+            if(cL1 && cL1.options.length === 0) {
+                LOJAS.forEach(l => { cL1.add(new Option(l, l)); cL2.add(new Option(l, l)); });
+                cL2.value = LOJAS[1] || LOJAS[0]; 
+            }
+
             atualizarSelectPeriodos();
-            if (db.periodos.length > 0) { carregarFormularioAtual(); }
-            Chart.register(window['chartjs-plugin-annotation']);
+            if (db.periodos.length > 0) carregarFormularioAtual();
         }
 
         function salvarDB() { localStorage.setItem('gestaoDespesasDB', JSON.stringify(db)); }
 
+        function obterRotuloCombustivel(nome) {
+            if (!nome) return 'Combustível';
+            const n = String(nome).toLowerCase();
+            if (n.includes('2024') || n.includes('1º semestre 2025') || n.includes('1s2025')) return 'Combustível';
+            return 'Combustível + Viagem';
+        }
+
+        // ================= FUNÇÕES DE FORMATAÇÃO E CÁLCULO EFETIVO =================
+        function limparNumero(str) {
+            if(typeof str === 'number') return str;
+            if(!str) return 0;
+            let s = str.toString().trim();
+            if(s.includes('R$')) { s = s.replace(/[R$\s\.]/g, '').replace(',', '.'); return parseFloat(s) || 0; }
+            if(s.includes(',')) { s = s.replace(/\./g, '').replace(',', '.'); }
+            return parseFloat(s) || 0;
+        }
+
+        function formatarVisual(num) {
+            if(num === null || num === undefined || isNaN(num) || num === 0) return 'R$ 0,00';
+            return parseFloat(num).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function onFocusMoeda(el) { let val = limparNumero(el.value); el.value = val === 0 ? '' : val; }
+        function onBlurMoeda(el) { let num = limparNumero(el.value); el.value = formatarVisual(num); }
+
+        function getDadosEfetivos(p) {
+            const efetivos = {};
+            const grupoVisconde = ['Visconde', 'Paula Leite', 'Vinhedo', 'Conceição'];
+            const grupoMorada = ['Morada', 'Salto', 'Itu', 'Elias Fausto', 'Maria José'];
+
+            let funcVisc = 0, cajuVisc = 0;
+            let funcMorada = 0, cajuMorada = 0;
+
+            LOJAS.forEach(l => {
+                const d = p.dados[l] || {};
+                const caju = parseFloat(d.caju) || 0;
+                const func = parseFloat(d.func) || 0;
+                if (grupoVisconde.includes(l)) { funcVisc += func; cajuVisc += caju; }
+                if (grupoMorada.includes(l)) { funcMorada += func; cajuMorada += caju; }
+            });
+
+            const cRateVisc = funcVisc > 0 ? cajuVisc / funcVisc : 0;
+            const cRateMorada = funcMorada > 0 ? cajuMorada / funcMorada : 0;
+
+            LOJAS.forEach(l => {
+                const d = p.dados[l] || {};
+                const alimBase = parseFloat(d.alim) || 0;
+                const combBase = parseFloat(d.comb) || 0;
+                const viagemBase = parseFloat(d.viagem) || 0;
+                const func = parseFloat(d.func) || 0;
+                const cajuRate = grupoVisconde.includes(l) ? cRateVisc : (grupoMorada.includes(l) ? cRateMorada : 0);
+                
+                efetivos[l] = {
+                    func: func, fat: parseFloat(d.fat) || 0,
+                    alim: alimBase + (cajuRate * func),
+                    comb: combBase + viagemBase,
+                    manut: parseFloat(d.manut) || 0, brindes: parseFloat(d.brindes) || 0
+                };
+            });
+            return efetivos;
+        }
+
+        // ================= CONTROLES DE INTERFACE =================
+        function switchTab(tabId) {
+            document.getElementById('tab-analise').classList.add('hidden');
+            document.getElementById('tab-comparativo').classList.add('hidden');
+            document.getElementById('tab-projecao').classList.add('hidden');
+            
+            document.getElementById('btn-tab-analise').classList.remove('active');
+            document.getElementById('btn-tab-comparativo').classList.remove('active');
+            document.getElementById('btn-tab-projecao').classList.remove('active');
+            
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.getElementById('btn-tab-' + tabId).classList.add('active');
+
+            if(tabId === 'projecao') atualizarAbaProjecoes();
+            else if(tabId === 'comparativo') atualizarAbaComparativa();
+            else atualizarDashboard();
+        }
+
         function atualizarSelectPeriodos() {
-            const select = document.getElementById('select-period');
-            select.innerHTML = '';
+            const sels = ['select-period', 'proj-base', 'proj-compare', 'comp-periodo-1', 'comp-periodo-2'];
             if (db.periodos.length === 0) {
                 document.getElementById('area-vazia').classList.remove('hidden');
                 document.getElementById('area-formulario').classList.add('hidden');
@@ -259,14 +389,20 @@
             document.getElementById('area-formulario').classList.remove('hidden');
             document.getElementById('dashboard-container').classList.remove('hidden');
 
-            db.periodos.forEach((p, idx) => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.text = p.nome;
-                select.appendChild(option);
+            sels.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    const currentVal = String(el.value);
+                    el.innerHTML = '';
+                    db.periodos.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id; opt.text = p.nome;
+                        el.appendChild(opt);
+                    });
+                    if(currentVal && db.periodos.find(p => p.id === currentVal)) el.value = currentVal;
+                    else el.value = db.periodos[db.periodos.length - 1].id;
+                }
             });
-            
-            if(!select.value && db.periodos.length > 0) select.value = db.periodos[db.periodos.length - 1].id;
         }
 
         function abrirModalNovoPeriodo() { document.getElementById('modal-periodo').classList.remove('hidden'); }
@@ -277,33 +413,20 @@
             const meses = parseInt(document.getElementById('novo-meses').value);
             if(!nome || !meses) return alert("Preencha os campos!");
             
-            const novo = {
-                id: Date.now().toString(),
-                nome: nome,
-                meses: meses,
-                dados: {}
-            };
-            
-            LOJAS.forEach(loja => {
-                novo.dados[loja] = { func: 0, fat: 0, alim: 0, comb: 0, manut: 0, brindes: 0 };
-            });
-            
+            const novo = { id: Date.now().toString(), nome: nome, meses: meses, dados: {} };
+            LOJAS.forEach(l => novo.dados[l] = { func: 0, fat: 0, alim: 0, caju: 0, comb: 0, viagem: 0, manut: 0, brindes: 0 });
             db.periodos.push(novo);
-            salvarDB();
-            atualizarSelectPeriodos();
+            salvarDB(); atualizarSelectPeriodos();
             document.getElementById('select-period').value = novo.id;
-            carregarFormularioAtual();
-            fecharModal();
+            carregarFormularioAtual(); fecharModal();
             document.getElementById('novo-nome').value = '';
         }
 
         function excluirPeriodo() {
             if (db.periodos.length === 0) return;
-            if (confirm("Tem certeza que deseja excluir o período atual?")) {
-                const id = document.getElementById('select-period').value;
-                db.periodos = db.periodos.filter(p => p.id !== id);
-                salvarDB();
-                atualizarSelectPeriodos();
+            if (confirm("Excluir o período selecionado?")) {
+                db.periodos = db.periodos.filter(p => p.id !== document.getElementById('select-period').value);
+                salvarDB(); atualizarSelectPeriodos();
                 if(db.periodos.length > 0) carregarFormularioAtual();
             }
         }
@@ -316,493 +439,490 @@
         function carregarFormularioAtual() {
             const p = getPeriodoAtual();
             if (!p) return;
-            document.getElementById('pdf-period-title').innerText = "Período Selecionado: " + p.nome;
             
+            const lblComb = obterRotuloCombustivel(p.nome);
+            setText('pdf-period-title', "Período: " + p.nome);
+            setText('th-comb', lblComb);
+            setText('lbl-kpi-comb', "Média " + lblComb);
+            setText('lbl-chart-comb', lblComb);
+            setText('lbl-evo-comb', "Evolução: " + lblComb + " (%)");
+
             const tbody = document.getElementById('tabela-dados');
             tbody.innerHTML = '';
-            
-            LOJAS.forEach(loja => {
-                const d = p.dados[loja] || { func: 0, fat: 0, alim: 0, comb: 0, manut: 0, brindes: 0 };
+            LOJAS.forEach(l => {
+                const d = p.dados[l] || { func: 0, fat: 0, alim: 0, caju: 0, comb: 0, viagem: 0, manut: 0, brindes: 0 };
+                
+                let tdCaju = `<td class="p-1 border text-center text-slate-300 bg-slate-50">-</td>`;
+                if (l === 'Morada' || l === 'Visconde') {
+                    tdCaju = `<td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-blue-50 border-blue-200" data-loja="${l}" data-campo="caju" value="${formatarVisual(d.caju)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-2 border font-semibold">${loja}</td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="func" value="${d.func}"></td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="fat" value="${d.fat}"></td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="alim" value="${d.alim}"></td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="comb" value="${d.comb}"></td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="manut" value="${d.manut}"></td>
-                    <td class="p-1 border"><input type="number" class="input-cell" data-loja="${loja}" data-campo="brindes" value="${d.brindes}"></td>
-                `;
+                    <td class="p-2 border font-semibold">${l}</td>
+                    <td class="p-1 border"><input type="number" class="input-cell text-center" data-loja="${l}" data-campo="func" value="${d.func || 0}"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="fat" value="${formatarVisual(d.fat)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="alim" value="${formatarVisual(d.alim)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    ${tdCaju}
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="comb" value="${formatarVisual(d.comb)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-amber-50" data-loja="${l}" data-campo="viagem" value="${formatarVisual(d.viagem)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="manut" value="${formatarVisual(d.manut)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="brindes" value="${formatarVisual(d.brindes)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>`;
                 tbody.appendChild(tr);
             });
             atualizarDashboard();
+            if(document.getElementById('tab-projecao') && !document.getElementById('tab-projecao').classList.contains('hidden')) atualizarAbaProjecoes();
+            if(document.getElementById('tab-comparativo') && !document.getElementById('tab-comparativo').classList.contains('hidden')) atualizarAbaComparativa();
         }
 
         function salvarDados() {
             const p = getPeriodoAtual();
             if (!p) return;
-            
-            const inputs = document.querySelectorAll('.input-cell');
-            inputs.forEach(input => {
-                const loja = input.getAttribute('data-loja');
-                const campo = input.getAttribute('data-campo');
-                p.dados[loja][campo] = parseFloat(input.value) || 0;
+            document.querySelectorAll('.input-cell').forEach(inp => {
+                const c = inp.getAttribute('data-campo');
+                if(c === 'func') {
+                    p.dados[inp.getAttribute('data-loja')][c] = parseFloat(inp.value) || 0;
+                } else {
+                    p.dados[inp.getAttribute('data-loja')][c] = limparNumero(inp.value);
+                }
             });
-            
-            salvarDB();
-            atualizarDashboard();
-            alert("Dados salvos e painel atualizado com sucesso!");
+            salvarDB(); atualizarDashboard();
+            if(document.getElementById('tab-projecao') && !document.getElementById('tab-projecao').classList.contains('hidden')) atualizarAbaProjecoes();
+            if(document.getElementById('tab-comparativo') && !document.getElementById('tab-comparativo').classList.contains('hidden')) atualizarAbaComparativa();
+            alert("Dados salvos com sucesso!");
         }
 
-        // ==========================================
-        // 2. MOTOR DE CÁLCULO
-        // ==========================================
         function calcularMétricasGlobais() {
-            const calcData = { periodos: [], grupo: {}, dadosPorPeriodo: {} };
-            
+            const cData = { periodos: [], grupo: {}, dadosPorPeriodo: {} };
             db.periodos.forEach(p => {
-                calcData.periodos.push(p.nome);
-                
-                let somaFunc = 0, somaFat = 0, somaAlim = 0, somaComb = 0, somaManut = 0, somaBrindes = 0;
-                
-                const ptData = {
-                    alim_dev: [], alim_func: [],
-                    comb: [], comb_rs: [], manut: [], manut_rs: [], brindes: [], brindes_rs: []
-                };
+                cData.periodos.push(p.nome);
+                let sf=0, sfat=0, sa=0, sc=0, sm=0, sb=0;
+                const pt = { alim_dev:[], alim_func:[], comb:[], comb_rs:[], manut:[], manut_rs:[], brindes:[], brindes_rs:[], custo_total: [] };
 
-                LOJAS.forEach(loja => {
-                    const d = p.dados[loja] || { func: 0, fat: 0, alim: 0, comb: 0, manut: 0, brindes: 0 };
-                    somaFunc += d.func;
-                    somaFat += d.fat;
-                    somaAlim += d.alim;
-                    somaComb += d.comb;
-                    somaManut += d.manut;
-                    somaBrindes += d.brindes;
+                const efetivos = getDadosEfetivos(p);
+
+                LOJAS.forEach(l => {
+                    const e = efetivos[l];
+                    sf+=e.func; sfat+=e.fat; sa+=e.alim; sc+=e.comb; sm+=e.manut; sb+=e.brindes;
                 });
 
-                const mediaGrupoAlimMensal = p.meses > 0 ? (somaAlim / p.meses) : 0;
-                const mediaGrupoAlimMensalFunc = somaFunc > 0 ? (mediaGrupoAlimMensal / somaFunc) : 0;
+                const mediaGrpAlim = p.meses > 0 ? (sa/p.meses) : 0;
+                const mediaGrpAlimF = sf > 0 ? (mediaGrpAlim/sf) : 0;
                 
-                calcData.grupo[p.nome] = {
-                    alim_func: mediaGrupoAlimMensalFunc,
-                    comb: somaFat > 0 ? (somaComb / somaFat) * 100 : 0,
-                    manut: somaFat > 0 ? (somaManut / somaFat) * 100 : 0,
-                    brindes: somaFat > 0 ? (somaBrindes / somaFat) * 100 : 0
+                cData.grupo[p.nome] = {
+                    alim_func: mediaGrpAlimF, comb: sfat>0 ? (sc/sfat)*100 : 0,
+                    manut: sfat>0 ? (sm/sfat)*100 : 0, brindes: sfat>0 ? (sb/sfat)*100 : 0
                 };
 
-                LOJAS.forEach(loja => {
-                    const d = p.dados[loja] || { func: 0, fat: 0, alim: 0, comb: 0, manut: 0, brindes: 0 };
-                    
-                    const gastoAlimMensal = p.meses > 0 ? (d.alim / p.meses) : 0;
-                    const gastoAlimMensalFunc = d.func > 0 ? (gastoAlimMensal / d.func) : 0;
-                    const metaAlimMensalLoja = mediaGrupoAlimMensalFunc * d.func;
-                    const desvioAlim = metaAlimMensalLoja - gastoAlimMensal;
-
-                    ptData.alim_func.push(gastoAlimMensalFunc);
-                    ptData.alim_dev.push(desvioAlim);
-                    
-                    ptData.comb.push(d.fat > 0 ? (d.comb / d.fat) * 100 : 0);
-                    ptData.comb_rs.push(d.comb);
-                    
-                    ptData.manut.push(d.fat > 0 ? (d.manut / d.fat) * 100 : 0);
-                    ptData.manut_rs.push(d.manut);
-                    
-                    ptData.brindes.push(d.fat > 0 ? (d.brindes / d.fat) * 100 : 0);
-                    ptData.brindes_rs.push(d.brindes);
+                LOJAS.forEach(l => {
+                    const e = efetivos[l];
+                    const gastoAlimMensal = p.meses > 0 ? (e.alim / p.meses) : 0;
+                    const gastoAlimMensalFunc = e.func > 0 ? (gastoAlimMensal / e.func) : 0;
+                    const metaAlimMensalLoja = mediaGrpAlimF * e.func;
+                    pt.alim_func.push(gastoAlimMensalFunc);
+                    pt.alim_dev.push(metaAlimMensalLoja - gastoAlimMensal);
+                    pt.comb.push(e.fat>0 ? (e.comb/e.fat)*100 : 0); pt.comb_rs.push(e.comb);
+                    pt.manut.push(e.fat>0 ? (e.manut/e.fat)*100 : 0); pt.manut_rs.push(e.manut);
+                    pt.brindes.push(e.fat>0 ? (e.brindes/e.fat)*100 : 0); pt.brindes_rs.push(e.brindes);
                 });
-
-                calcData.dadosPorPeriodo[p.nome] = ptData;
+                cData.dadosPorPeriodo[p.nome] = pt;
             });
-
-            return calcData;
+            return cData;
         }
 
-        // ==========================================
-        // 3. RENDERIZAÇÃO DE GRÁFICOS (CHART.JS)
-        // ==========================================
-        let renderCache = null;
-
-        function renderizarBarChart(ctxId, color, isPercentage, chartKey) {
-            const ctx = document.getElementById(ctxId).getContext('2d');
-            if(charts[chartKey]) charts[chartKey].destroy();
+        // ================= Aba Comparativa (A vs B) =================
+        function atualizarAbaComparativa() {
+            if(db.periodos.length === 0) return;
             
-            charts[chartKey] = new Chart(ctx, {
+            const l1 = document.getElementById('comp-loja-1').value;
+            const p1Id = document.getElementById('comp-periodo-1').value;
+            const l2 = document.getElementById('comp-loja-2').value;
+            const p2Id = document.getElementById('comp-periodo-2').value;
+
+            if(!l1 || !p1Id || !l2 || !p2Id) return;
+
+            const p1 = db.periodos.find(x => x.id === p1Id);
+            const p2 = db.periodos.find(x => x.id === p2Id);
+            if(!p1 || !p2) return;
+
+            const ef1 = getDadosEfetivos(p1)[l1];
+            const ef2 = getDadosEfetivos(p2)[l2];
+
+            const alim1 = p1.meses > 0 && ef1.func > 0 ? (ef1.alim / p1.meses) / ef1.func : 0;
+            const alim2 = p2.meses > 0 && ef2.func > 0 ? (ef2.alim / p2.meses) / ef2.func : 0;
+            
+            const comb1 = ef1.fat > 0 ? (ef1.comb / ef1.fat) * 100 : 0;
+            const comb2 = ef2.fat > 0 ? (ef2.comb / ef2.fat) * 100 : 0;
+            
+            const man1 = ef1.fat > 0 ? (ef1.manut / ef1.fat) * 100 : 0;
+            const man2 = ef2.fat > 0 ? (ef2.manut / ef2.fat) * 100 : 0;
+            
+            const bri1 = ef1.fat > 0 ? (ef1.brindes / ef1.fat) * 100 : 0;
+            const bri2 = ef2.fat > 0 ? (ef2.brindes / ef2.fat) * 100 : 0;
+
+            setText('comp-alim-1', 'R$ ' + alim1.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+            setText('comp-alim-2', 'R$ ' + alim2.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+            setText('comp-comb-1', comb1.toFixed(2) + '%');
+            setText('comp-comb-2', comb2.toFixed(2) + '%');
+            setText('comp-man-1', man1.toFixed(2) + '%');
+            setText('comp-man-2', man2.toFixed(2) + '%');
+            setText('comp-bri-1', bri1.toFixed(2) + '%');
+            setText('comp-bri-2', bri2.toFixed(2) + '%');
+
+            const m1 = p1.meses || 1;
+            const m2 = p2.meses || 1;
+
+            const data1 = [ ef1.alim/m1, ef1.comb/m1, ef1.manut/m1, ef1.brindes/m1 ];
+            const data2 = [ ef2.alim/m2, ef2.comb/m2, ef2.manut/m2, ef2.brindes/m2 ];
+
+            const lbl1 = `${l1} (${p1.nome})`;
+            const lbl2 = `${l2} (${p2.nome})`;
+
+            if(charts['compChart']) charts['compChart'].destroy();
+            charts['compChart'] = new Chart(document.getElementById('compChart').getContext('2d'), {
                 type: 'bar',
+                data: {
+                    labels: ['Alimentação', 'Combustível + Viagem', 'Manutenção', 'Brindes'],
+                    datasets: [
+                        { label: lbl1, data: data1, backgroundColor: colors.blue, borderRadius: 4 },
+                        { label: lbl2, data: data2, backgroundColor: colors.red, borderRadius: 4 }
+                    ]
+                },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    if(!isPercentage) return `${ctx.dataset.label}: R$ ${ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-                                    
-                                    const pNome = getPeriodoAtual().nome;
-                                    const pData = renderCache.dadosPorPeriodo[pNome];
-                                    let rsValue = 0;
-                                    if (ctx.dataset.label.includes('Combustível')) rsValue = pData.comb_rs[ctx.dataIndex];
-                                    if (ctx.dataset.label.includes('Manutenção')) rsValue = pData.manut_rs[ctx.dataIndex];
-                                    if (ctx.dataset.label.includes('Brindes')) rsValue = pData.brindes_rs[ctx.dataIndex];
-                                    return `${ctx.dataset.label}: ${ctx.raw.toFixed(2)}% (R$ ${rsValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})})`;
-                                }
-                            }
-                        }
-                    },
-                    scales: { y: { ticks: { callback: value => isPercentage ? value + '%' : 'R$ ' + value } } }
-                },
-                data: { labels: LOJAS, datasets: [{ backgroundColor: color, data: [] }] }
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
+                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
+                }
             });
         }
 
-        function renderizarEvoChart(ctxId, dataMetric, chartKey, isPercentage) {
-            const ctx = document.getElementById(ctxId).getContext('2d');
-            if(charts[chartKey]) charts[chartKey].destroy();
+        // ================= Aba 3 Lógica (Projeção Total + Individual) =================
+        function atualizarAbaProjecoes() {
+            if(db.periodos.length < 2) return;
+            const elBase = document.getElementById('proj-base');
+            const elComp = document.getElementById('proj-compare');
+            if(!elBase || !elComp) return;
+            
+            const bId = elBase.value;
+            const cId = elComp.value;
+            const pBase = db.periodos.find(x=>x.id===bId);
+            const pComp = db.periodos.find(x=>x.id===cId);
+            if(!pBase || !pComp) return;
 
-            charts[chartKey] = new Chart(ctx, {
-                type: 'line',
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => ctx.dataset.label + ': ' + (!isPercentage ? 'R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : ctx.raw.toFixed(2) + '%')
-                            }
-                        }
+            const lblBase = obterRotuloCombustivel(pBase.nome);
+            const lblComp = obterRotuloCombustivel(pComp.nome);
+            document.getElementById('aviso-viagem').classList.toggle('hidden', lblBase === lblComp);
+            setText('lbl-proj-comb', "Variação Projetada: " + lblBase + " (R$)");
+
+            const efetivosBase = getDadosEfetivos(pBase);
+            const efetivosComp = getDadosEfetivos(pComp);
+
+            const dataTotal = [], dataAlim = [], dataComb = [], dataManut = [], dataBrindes = [];
+            LOJAS.forEach(l => {
+                const b = efetivosBase[l], c = efetivosComp[l];
+                const multB = 12 / (pBase.meses || 1);
+                const multC = 12 / (pComp.meses || 1);
+                
+                const vAlim = (b.alim * multB) - (c.alim * multC);
+                const vComb = (b.comb * multB) - (c.comb * multC);
+                const vManut = (b.manut * multB) - (c.manut * multC);
+                const vBrindes = (b.brindes * multB) - (c.brindes * multC);
+                
+                dataAlim.push(vAlim);
+                dataComb.push(vComb);
+                dataManut.push(vManut);
+                dataBrindes.push(vBrindes);
+                dataTotal.push(vAlim + vComb + vManut + vBrindes);
+            });
+
+            const renderProj = (id, dataArr) => {
+                const ctx = document.getElementById(id);
+                if(!ctx) return;
+                if(charts[id]) charts[id].destroy();
+                charts[id] = new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: LOJAS, datasets: [{ data: dataArr, backgroundColor: dataArr.map(v=>v>0?colors.red:colors.blue), borderRadius: 4 }] },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { legend:{display:false}, tooltip: {callbacks:{label:c=>'Variação: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}} },
+                        scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
                     }
-                },
-                data: { labels: [], datasets: [] }
-            });
+                });
+            };
+
+            renderProj('projTotalChart', dataTotal);
+            renderProj('projAlimChart', dataAlim);
+            renderProj('projCombChart', dataComb);
+            renderProj('projManutChart', dataManut);
+            renderProj('projBrindesChart', dataBrindes);
         }
 
+        // ================= Aba 1 Lógica =================
         function atualizarDashboard() {
             if (db.periodos.length === 0) return;
             renderCache = calcularMétricasGlobais();
             
             const p = getPeriodoAtual();
+            if(!p) return;
             const pNome = p.nome;
+            
             const pData = renderCache.dadosPorPeriodo[pNome];
             const grp = renderCache.grupo[pNome];
+            if (!pData || !grp) return;
+            
+            const rotuloComb = obterRotuloCombustivel(pNome);
 
-            document.getElementById('kpi-alim').innerText = 'R$ ' + grp.alim_func.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-            document.getElementById('kpi-comb').innerText = grp.comb.toFixed(2) + '%';
-            document.getElementById('kpi-manut').innerText = grp.manut.toFixed(2) + '%';
-            document.getElementById('kpi-brindes').innerText = grp.brindes.toFixed(2) + '%';
+            setText('pdf-period-title', "Período: " + pNome);
+            setText('lbl-chart-comb', rotuloComb);
+            setText('lbl-kpi-comb', "Média " + rotuloComb);
+            setText('lbl-evo-comb', "Evolução: " + rotuloComb + " (%)");
 
-            if(!charts.devAlimChart) {
-                const ctxDev = document.getElementById('devAlimChart').getContext('2d');
-                charts.devAlimChart = new Chart(ctxDev, {
-                    type: 'bar',
-                    options: {
-                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'Desvio: R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
-                        scales: { x: { grid: { color: '#cbd5e1', lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1 } } }
-                    },
-                    data: { labels: LOJAS, datasets: [] }
-                });
-                renderizarBarChart('barAlimChart', colors.blue, false, 'barAlimChart');
-                renderizarBarChart('barCombChart', colors.amber, true, 'barCombChart');
-                renderizarBarChart('barManutChart', colors.rose, true, 'barManutChart');
-                renderizarBarChart('barBrindesChart', colors.emerald, true, 'barBrindesChart');
+            setText('kpi-alim', 'R$ ' + grp.alim_func.toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+            setText('kpi-comb', grp.comb.toFixed(2) + '%');
+            setText('kpi-manut', grp.manut.toFixed(2) + '%');
+            setText('kpi-brindes', grp.brindes.toFixed(2) + '%');
 
-                renderizarEvoChart('evoAlimChart', 'alim_func', 'evoAlimChart', false);
-                renderizarEvoChart('evoCombChart', 'comb', 'evoCombChart', true);
-                renderizarEvoChart('evoManutChart', 'manut', 'evoManutChart', true);
-                renderizarEvoChart('evoBrindesChart', 'brindes', 'evoBrindesChart', true);
+            if(!charts['devAlim']) {
+                const elDevAlim = document.getElementById('devAlimChart');
+                if(elDevAlim) {
+                    charts['devAlim'] = new Chart(elDevAlim.getContext('2d'), {
+                        type: 'bar', options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>'Desvio: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}} }, scales: { x:{grid:{color:'#cbd5e1', lineWidth:c=>c.tick.value===0?2:1}} } },
+                        data: { labels: LOJAS, datasets: [] }
+                    });
+                }
+            }
+            if(charts['devAlim']) {
+                charts['devAlim'].data.datasets = [{ data: pData.alim_dev, backgroundColor: pData.alim_dev.map(v=>v>=0?colors.blue:colors.red), borderRadius: 4 }];
+                charts['devAlim'].update();
             }
 
-            charts.devAlimChart.data.datasets = [{
-                data: pData.alim_dev,
-                backgroundColor: pData.alim_dev.map(v => v >= 0 ? colors.blue : colors.red),
-                borderRadius: 4
-            }];
-            charts.devAlimChart.update();
-
-            const updBar = (key, dataArr, avgVal, lbl) => {
+            const renderBar = (cid, key, color, isPerc, arr, avg, lbl) => {
+                const el = document.getElementById(cid);
+                if(!el) return;
+                if(!charts[key]) {
+                    charts[key] = new Chart(el.getContext('2d'), {
+                        type: 'bar', options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>{if(!isPerc)return c.dataset.label+': R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}); let pN = ""; if (typeof getPeriodoAtual === 'function' && getPeriodoAtual()) { pN = getPeriodoAtual().nome; } else { const sel=document.getElementById('select-period'); if(sel) pN=sel.options[sel.selectedIndex].text; } if(!pN || !renderCache || !renderCache.dadosPorPeriodo[pN]) return c.dataset.label+': '+c.raw.toFixed(2)+'%'; const pd=renderCache.dadosPorPeriodo[pN]; let rs=0; if(c.dataset.label.includes('Combustível'))rs=pd.comb_rs[c.dataIndex]; if(c.dataset.label.includes('Manutenção'))rs=pd.manut_rs[c.dataIndex]; if(c.dataset.label.includes('Brindes'))rs=pd.brindes_rs[c.dataIndex]; return c.dataset.label+': '+c.raw.toFixed(2)+'% (R$ '+rs.toLocaleString('pt-BR',{minimumFractionDigits:2})+')'}}}}, scales:{y:{ticks:{callback:v=>isPerc?v+'%':'R$ '+v}}} },
+                        data: { labels: LOJAS, datasets: [{backgroundColor: color, data: []}] }
+                    });
+                }
                 const c = charts[key];
-                c.data.datasets[0].data = dataArr;
-                c.data.datasets[0].label = lbl;
-                c.options.plugins.annotation = { annotations: { avg: { type: 'line', yMin: avgVal, yMax: avgVal, borderColor: '#334155', borderWidth: 2, borderDash: [5, 5] } } };
+                c.data.datasets[0].data = arr; c.data.datasets[0].label = lbl;
+                c.options.plugins.annotation = { annotations: { avg: { type: 'line', yMin: avg, yMax: avg, borderColor: '#334155', borderWidth: 2, borderDash: [5, 5] } } };
                 c.update();
             };
 
-            updBar('barAlimChart', pData.alim_func, grp.alim_func, 'Alimentação (R$/Func)');
-            updBar('barCombChart', pData.comb, grp.comb, 'Combustível (%)');
-            updBar('barManutChart', pData.manut, grp.manut, 'Manutenção (%)');
-            updBar('barBrindesChart', pData.brindes, grp.brindes, 'Brindes (%)');
+            renderBar('barAlimChart', 'barAlim', colors.blue, false, pData.alim_func, grp.alim_func, 'Alimentação (R$/Func)');
+            renderBar('barCombChart', 'barComb', colors.amber, true, pData.comb, grp.comb, rotuloComb + ' (%)');
+            renderBar('barManutChart', 'barManut', colors.rose, true, pData.manut, grp.manut, 'Manutenção (%)');
+            renderBar('barBrindesChart', 'barBrindes', colors.emerald, true, pData.brindes, grp.brindes, 'Brindes (%)');
 
-            const updEvo = (key, metricObjKey, grpKey) => {
+            const renderEvo = (cid, key, metric, grpMetric, formatR$) => {
+                const el = document.getElementById(cid);
+                if(!el) return;
+                if(!charts[key]) {
+                    charts[key] = new Chart(el.getContext('2d'), {
+                        type: 'line', options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+(formatR$?'R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}):c.raw.toFixed(2)+'%')}}} },
+                        data: { labels: [], datasets: [] }
+                    });
+                }
                 const c = charts[key];
                 c.data.labels = renderCache.periodos;
-                
-                const datasets = LOJAS.map((loja, idx) => ({
+                const ds = LOJAS.map((loja, idx) => ({
                     label: loja,
-                    data: renderCache.periodos.map(per => renderCache.dadosPorPeriodo[per][metricObjKey][idx]),
+                    data: renderCache.periodos.map(per => renderCache.dadosPorPeriodo[per][metric][idx]),
                     borderColor: `hsl(${(idx * 360 / 9)}, 70%, 50%)`, borderWidth: 2, tension: 0.1, fill: false
                 }));
-
-                datasets.push({
+                ds.push({
                     label: 'MÉDIA GRUPO',
-                    data: renderCache.periodos.map(per => renderCache.grupo[per][grpKey]),
+                    data: renderCache.periodos.map(per => renderCache.grupo[per][grpMetric]),
                     borderColor: colors.slate, borderWidth: 4, borderDash: [5, 5], tension: 0.1
                 });
-
-                c.data.datasets = datasets;
+                c.data.datasets = ds;
                 c.update();
             };
 
-            updEvo('evoAlimChart', 'alim_func', 'alim_func');
-            updEvo('evoCombChart', 'comb', 'comb');
-            updEvo('evoManutChart', 'manut', 'manut');
-            updEvo('evoBrindesChart', 'brindes', 'brindes');
+            renderEvo('evoAlimChart', 'evoAlim', 'alim_func', 'alim_func', true);
+            renderEvo('evoCombChart', 'evoComb', 'comb', 'comb', false);
+            renderEvo('evoManutChart', 'evoManut', 'manut', 'manut', false);
+            renderEvo('evoBrindesChart', 'evoBrindes', 'brindes', 'brindes', false);
         }
 
-        // ==========================================
-        // 4. MÉTODOS DE EXPORTAÇÃO
-        // ==========================================
+        function prepararEImprimirPDF() {
+            document.getElementById('tab-analise').classList.remove('hidden');
+            document.getElementById('tab-comparativo').classList.remove('hidden');
+            document.getElementById('tab-projecao').classList.remove('hidden');
+            for (let key in charts) { if (charts[key]) charts[key].resize(); }
+            setTimeout(() => {
+                window.print();
+                
+                const isComp = document.getElementById('btn-tab-comparativo').classList.contains('active');
+                const isProj = document.getElementById('btn-tab-projecao').classList.contains('active');
+                
+                if (isComp) {
+                    document.getElementById('tab-analise').classList.add('hidden');
+                    document.getElementById('tab-projecao').classList.add('hidden');
+                } else if (isProj) {
+                    document.getElementById('tab-analise').classList.add('hidden');
+                    document.getElementById('tab-comparativo').classList.add('hidden');
+                } else {
+                    document.getElementById('tab-comparativo').classList.add('hidden');
+                    document.getElementById('tab-projecao').classList.add('hidden');
+                }
+
+                setTimeout(() => { for (let key in charts) { if (charts[key]) charts[key].resize(); } }, 100);
+            }, 350);
+        }
+
+        // ================= EXPORTAÇÕES =================
         function exportarJSON() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "backup_despesas.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            const dl = document.createElement('a'); dl.href = dataStr; dl.download = "backup_despesas.json";
+            document.body.appendChild(dl); dl.click(); dl.remove();
         }
 
         function importarJSON(event) {
-            const file = event.target.files[0];
+            const file = event.target.files[0]; 
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const loaded = JSON.parse(e.target.result);
-                    if(loaded.periodos) {
-                        db = loaded;
-                        salvarDB();
-                        init();
-                        alert("Backup carregado com sucesso!");
+                    if(loaded.periodos) { 
+                        loaded.periodos.forEach(p => {
+                            if(p.id) p.id = String(p.id);
+                            if(p.nome) p.nome = String(p.nome);
+                        });
+                        db = loaded; 
+                        salvarDB(); 
+                        atualizarSelectPeriodos();
+                        if (db.periodos.length > 0) carregarFormularioAtual();
+                        alert("Backup importado e processado com sucesso!"); 
                     } else { alert("Arquivo inválido."); }
-                } catch (err) { alert("Erro ao ler o arquivo JSON."); }
+                } catch(err) { 
+                    console.error("Erro na importação: ", err);
+                    alert("Erro ao ler o arquivo JSON. Detalhes no console."); 
+                }
+                document.getElementById('fileInput').value = ''; 
             };
             reader.readAsText(file);
         }
 
         function exportarHTMLDashboard() {
-            if (db.periodos.length === 0) return alert("Não há dados para exportar.");
+            if (db.periodos.length === 0) return alert("Sem dados.");
             
+            ['select-period', 'proj-base', 'proj-compare', 'comp-loja-1', 'comp-periodo-1', 'comp-loja-2', 'comp-periodo-2'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el && el.options.length > 0) {
+                    Array.from(el.options).forEach(opt => opt.removeAttribute('selected'));
+                    if(el.selectedIndex >= 0) el.options[el.selectedIndex].setAttribute('selected', 'selected');
+                }
+            });
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = document.getElementById('dashboard-container').innerHTML;
+            tempDiv.querySelectorAll('.relative').forEach(container => {
+                const canvasId = container.querySelector('canvas').id;
+                container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+            });
+
             const calcData = calcularMétricasGlobais();
+            const headerHtml = tempDiv.innerHTML;
             const closeScript = '<' + '/script>';
             
-            const templateHTML = `<!DOCTYPE html>
+            const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Interativo - Grupo</title>
-    
-    <!-- Metatags para Redes Sociais e WhatsApp -->
-    <meta property="og:title" content="Relatório Executivo de Despesas">
-    <meta property="og:description" content="Dashboard interativo de monitoramento de despesas e métricas.">
-    <meta property="og:image" content="favicon.png">
-    <meta property="og:type" content="website">
-    
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Analítico</title>
     <link rel="icon" href="favicon.png" type="image/png">
-    
     <script src="https://cdn.tailwindcss.com">${closeScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js">${closeScript}
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js">${closeScript}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>body{background:#f1f5f9;font-family:'Segoe UI',sans-serif;color:#334155}.card{background:#fff;border-radius:6px;padding:1.5rem;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05);margin-bottom:1.5rem}.tab-btn{padding:.75rem 1.5rem;font-weight:600;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;color:#64748b}.tab-btn:hover{color:#1e293b}.tab-btn.active{border-bottom-color:#3b82f6;color:#2563eb}</style>
     <style>
-        body { background-color: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; } 
-        .card { background: white; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #e2e8f0; } 
-        select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.5rem; font-weight: 500; outline: none; }
-        
         @media print {
             body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 24px !important; display: block !important; }
+            .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 24px !important; display: block !important; width: 100% !important; }
             .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
-            .print-charts-container { display: block !important; }
-            .print-charts-container > .card { width: 100% !important; }
-            .relative.h-64, .relative.h-80 { height: 280px !important; }
+            .print-charts-container { display: block !important; width: 100% !important; }
+            .print-charts-container > .card { width: 100% !important; display: block !important; }
+            .relative.h-64, .relative.h-80, .relative.h-96 { height: 280px !important; width: 100% !important; }
+            canvas { max-width: 100% !important; max-height: 100% !important; width: 100% !important; height: 100% !important; object-fit: contain; }
             .print-page-break { page-break-before: always !important; break-before: page !important; padding-top: 20px; border-top: none !important; }
+            #tab-analise, #tab-comparativo, #tab-projecao { display: block !important; }
+            .tabs-nav { display: none !important; }
             @page { size: A4 portrait; margin: 10mm; }
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body class="p-4 md:p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
-        
-        <!-- Cabeçalho (Tela) -->
-        <div class="no-print flex flex-col md:flex-row justify-between items-center bg-white text-slate-800 border border-slate-200 rounded-lg p-6 shadow-md">
-            <div class="flex items-center">
-                <img src="logo.png" alt="Logo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
-                <div>
-                    <h1 class="text-2xl font-bold">Relatório Executivo de Despesas</h1>
-                    <p class="text-slate-500 text-sm mt-1">Comparativos individuais com a média do grupo.</p>
-                </div>
-            </div>
-            <div class="mt-4 md:mt-0 flex gap-4 items-center">
-                <button onclick="window.print()" class="bg-blue-600 text-white hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold transition">Exportar PDF</button>
-                <div>
-                    <label class="mr-2 text-sm font-semibold">Período de Análise:</label>
-                    <select id="periodSelector" onchange="updateCharts()" class="text-slate-900 bg-white">
-                        ${calcData.periodos.map((p, i) => `<option value="${p}" ${i===calcData.periodos.length-1?'selected':''}>${p}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Cabeçalho (PDF) -->
-        <div class="hidden print:flex border-b-2 border-slate-800 pb-4 mb-6 items-center">
-            <img src="logo.png" alt="Logo" class="h-12 w-auto mr-4" onerror="this.style.display='none'">
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="no-print flex flex-col md:flex-row justify-between items-center bg-white text-slate-800 border border-slate-200 rounded-lg p-6 shadow-md mb-6 gap-4">
+        <div class="flex items-center">
+            <img src="logo.png" alt="Logo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
             <div>
-                <h1 class="text-2xl font-bold">Relatório de Exceções e Despesas</h1>
-                <p class="text-slate-500 font-semibold" id="pdf-period-title"></p>
+                <h1 class="text-2xl font-bold">Relatório Executivo Analítico</h1>
+                <p class="text-slate-500 text-sm mt-1">Visão Interativa (Apenas Leitura)</p>
             </div>
         </div>
-
-        <div class="kpi-container grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="card bg-blue-50 border-blue-200"><p class="text-xs font-semibold text-blue-800">Média Alim. Mensal/Func.</p><h3 class="text-xl font-bold text-blue-900 mt-1" id="kpi-alim">--</h3></div>
-            <div class="card bg-amber-50 border-amber-200"><p class="text-xs font-semibold text-amber-800">Combustível</p><h3 class="text-xl font-bold text-amber-900 mt-1" id="kpi-comb">--</h3></div>
-            <div class="card bg-rose-50 border-rose-200"><p class="text-xs font-semibold text-rose-800">Manutenção de Veículo</p><h3 class="text-xl font-bold text-rose-900 mt-1" id="kpi-manut">--</h3></div>
-            <div class="card bg-emerald-50 border-emerald-200"><p class="text-xs font-semibold text-emerald-800">Brindes</p><h3 class="text-xl font-bold text-emerald-900 mt-1" id="kpi-brindes">--</h3></div>
-        </div>
-        
-        <h2 class="text-xl font-bold text-slate-700 mt-8 mb-4 border-b pb-2">Análise por Período</h2>
-        <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="card"><h3 class="text-md font-bold mb-1">Desvio: Alimentação Geral Mensal</h3><p class="text-xs text-slate-500 mb-4">Diferença p/ Média (R$). Negativo = Acima da média.</p><div class="relative h-64"><canvas id="devAlimChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-1">Gasto: Alimentação Geral Mensal (R$/Func)</h3><p class="text-xs text-slate-500 mb-4">Valor por funcionário. Linha indica média.</p><div class="relative h-64"><canvas id="barAlimChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-1">Combustível</h3><p class="text-xs text-slate-500 mb-4">% Faturamento. Linha indica média.</p><div class="relative h-64"><canvas id="barCombChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-1">Manutenção de Veículo</h3><p class="text-xs text-slate-500 mb-4">% Faturamento. Linha indica média.</p><div class="relative h-64"><canvas id="barManutChart"></canvas></div></div>
-            <div class="card print-full"><h3 class="text-md font-bold mb-1">Brindes</h3><p class="text-xs text-slate-500 mb-4">% Faturamento. Linha indica média.</p><div class="relative h-64"><canvas id="barBrindesChart"></canvas></div></div>
-        </div>
-        
-        <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica</h2>
-        <div class="print-charts-container grid grid-cols-1 gap-8">
-            <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Alimentação Geral Mensal / Func. (R$)</h3><div class="relative h-80"><canvas id="evoAlimChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Combustível (%)</h3><div class="relative h-80"><canvas id="evoCombChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Manutenção de Veículo (%)</h3><div class="relative h-80"><canvas id="evoManutChart"></canvas></div></div>
-            <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Brindes (%)</h3><div class="relative h-80"><canvas id="evoBrindesChart"></canvas></div></div>
+        <div class="flex items-center gap-4">
+            <button onclick="prepararEImprimirPDF()" class="bg-blue-600 text-white hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold transition"><i class="fas fa-file-pdf mr-1"></i> Exportar PDF</button>
+            <div>
+                <label class="mr-2 text-sm font-semibold">Período de Análise (Aba 1):</label>
+                <select id="select-period" onchange="atualizarDashboard()" class="border border-slate-300 rounded px-3 py-1 bg-white">
+                    ${db.periodos.map(p => `<option value="${p.id}" ${p.id === document.getElementById('select-period').value ? 'selected' : ''}>${p.nome}</option>`).join('')}
+                </select>
+            </div>
         </div>
     </div>
-    <script>
-        const LOJAS = ${JSON.stringify(LOJAS)};
-        const calcData = ${JSON.stringify(calcData)};
-        const colors = { blue: '#3b82f6', red: '#ef4444', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
-        let charts = {};
+    <div id="dashboard-container">
+        ${headerHtml}
+    </div>
+</div>
+<script>
+    const LOJAS = ${JSON.stringify(LOJAS)};
+    const db = ${JSON.stringify(db)};
+    const calcData = ${JSON.stringify(calcData)};
+    let renderCache = calcData;
+    const colors = { blue: '#3b82f6', red: '#ef4444', green: '#10b981', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
+    let charts = {};
+    try { if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); } catch(e){}
 
-        function createBarChart(ctxId, color, isPerc, key) {
-            const ctx = document.getElementById(ctxId).getContext('2d');
-            charts[key] = new Chart(ctx, {
-                type: 'bar',
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    if(!isPerc) return \`\${ctx.dataset.label}: R$ \${ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\`;
-                                    const pName = document.getElementById('periodSelector').value;
-                                    const pData = calcData.dadosPorPeriodo[pName];
-                                    let rsValue = 0;
-                                    if (ctx.dataset.label.includes('Combustível')) rsValue = pData.comb_rs[ctx.dataIndex];
-                                    if (ctx.dataset.label.includes('Manutenção')) rsValue = pData.manut_rs[ctx.dataIndex];
-                                    if (ctx.dataset.label.includes('Brindes')) rsValue = pData.brindes_rs[ctx.dataIndex];
-                                    return \`\${ctx.dataset.label}: \${ctx.raw.toFixed(2)}% (R$ \${rsValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})})\`;
-                                }
-                            }
-                        }
-                    },
-                    scales: { y: { ticks: { callback: v => isPerc ? v + '%' : 'R$ ' + v } } }
-                },
-                data: { labels: LOJAS, datasets: [{ backgroundColor: color, data: [] }] }
-            });
-        }
+    ${setText.toString()}
+    ${limparNumero.toString()}
+    ${formatarVisual.toString()}
+    ${getDadosEfetivos.toString()}
+    ${obterRotuloCombustivel.toString()}
+    ${switchTab.toString()}
+    ${calcularMétricasGlobais.toString()}
+    
+    function getPeriodoAtual() {
+        const id = document.getElementById('select-period').value;
+        return db.periodos.find(p => p.id === id);
+    }
 
-        function createEvoChart(ctxId, metric, formatR$, key) {
-            const ctx = document.getElementById(ctxId).getContext('2d');
-            const ds = LOJAS.map((loja, idx) => ({
-                label: loja, data: calcData.periodos.map(p => calcData.dadosPorPeriodo[p][metric][idx]),
-                borderColor: \`hsl(\${(idx * 360 / 9)}, 70%, 50%)\`, borderWidth: 2, tension: 0.1, fill: false
-            }));
-            const grpMetric = metric === 'alim_func' ? 'alim_func' : metric;
-            ds.push({
-                label: 'MÉDIA GRUPO', data: calcData.periodos.map(p => calcData.grupo[p][grpMetric]),
-                borderColor: colors.slate, borderWidth: 4, borderDash: [5, 5], tension: 0.1
-            });
+    ${atualizarDashboard.toString()}
+    ${atualizarAbaComparativa.toString()}
+    ${atualizarAbaProjecoes.toString()}
+    ${prepararEImprimirPDF.toString()}
 
-            charts[key] = new Chart(ctx, {
-                type: 'line', data: { labels: calcData.periodos, datasets: ds },
-                options: {
-                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                    plugins: { tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (formatR$ ? 'R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : ctx.raw.toFixed(2) + '%') } } }
-                }
-            });
-        }
-
-        function initCharts() {
-            Chart.register(window['chartjs-plugin-annotation']);
-            const ctxDev = document.getElementById('devAlimChart').getContext('2d');
-            charts['devAlim'] = new Chart(ctxDev, {
-                type: 'bar',
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'Desvio: R$ ' + ctx.raw.toLocaleString('pt-BR') } } },
-                    scales: { x: { grid: { color: '#cbd5e1', lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1 } } }
-                },
-                data: { labels: LOJAS, datasets: [] }
-            });
-            createBarChart('barAlimChart', colors.blue, false, 'barAlim');
-            createBarChart('barCombChart', colors.amber, true, 'barComb');
-            createBarChart('barManutChart', colors.rose, true, 'barManut');
-            createBarChart('barBrindesChart', colors.emerald, true, 'barBrindes');
-
-            createEvoChart('evoAlimChart', 'alim_func', true, 'evoAlim');
-            createEvoChart('evoCombChart', 'comb', false, 'evoComb');
-            createEvoChart('evoManutChart', 'manut', false, 'evoManut');
-            createEvoChart('evoBrindesChart', 'brindes', false, 'evoBrindes');
-            updateCharts();
-        }
-
-        function updateCharts() {
-            const pNome = document.getElementById('periodSelector').value;
-            const pData = calcData.dadosPorPeriodo[pNome];
-            const grp = calcData.grupo[pNome];
+    window.onload = () => { 
+        document.getElementById('dashboard-container').classList.remove('hidden');
+        if(document.getElementById('tab-analise') && !document.getElementById('tab-analise').classList.contains('hidden')) atualizarDashboard();
+        if(document.getElementById('tab-comparativo') && !document.getElementById('tab-comparativo').classList.contains('hidden')) atualizarAbaComparativa();
+        if(document.getElementById('tab-projecao') && !document.getElementById('tab-projecao').classList.contains('hidden')) atualizarAbaProjecoes();
+    };
+${closeScript}
+</body></html>`;
             
-            document.getElementById('pdf-period-title').innerText = "Período Selecionado: " + pNome;
-
-            document.getElementById('kpi-alim').innerText = 'R$ ' + grp.alim_func.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-            document.getElementById('kpi-comb').innerText = grp.comb.toFixed(2) + '%';
-            document.getElementById('kpi-manut').innerText = grp.manut.toFixed(2) + '%';
-            document.getElementById('kpi-brindes').innerText = grp.brindes.toFixed(2) + '%';
-
-            charts['devAlim'].data.datasets = [{ data: pData.alim_dev, backgroundColor: pData.alim_dev.map(v => v >= 0 ? colors.blue : colors.red), borderRadius: 4 }];
-            charts['devAlim'].update();
-
-            const upd = (k, arr, avg, lbl) => {
-                charts[k].data.datasets[0].data = arr; charts[k].data.datasets[0].label = lbl;
-                charts[k].options.plugins.annotation = { annotations: { avg: { type: 'line', yMin: avg, yMax: avg, borderColor: '#334155', borderWidth: 2, borderDash: [5, 5] } } };
-                charts[k].update();
-            };
-            upd('barAlim', pData.alim_func, grp.alim_func, 'Alimentação (R$/Func)');
-            upd('barComb', pData.comb, grp.comb, 'Combustível (%)');
-            upd('barManut', pData.manut, grp.manut, 'Manutenção (%)');
-            upd('barBrindes', pData.brindes, grp.brindes, 'Brindes (%)');
-        }
-        window.onload = initCharts;
-    ${closeScript}
-</body>
-</html>`;
-
-            const dataStr = "data:text/html;charset=utf-8," + encodeURIComponent(templateHTML);
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "dashboard_interativo.html");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            const dl = document.createElement('a');
+            dl.href = "data:text/html;charset=utf-8," + encodeURIComponent(fullHtml);
+            dl.download = "dashboard_estatico.html"; 
+            document.body.appendChild(dl); 
+            dl.click(); 
+            dl.remove();
         }
 
         window.onload = init;
