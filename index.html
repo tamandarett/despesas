@@ -6,7 +6,7 @@
     <title>Painel Gerencial de Despesas</title>
     
     <meta property="og:title" content="Painel Gerencial de Despesas - Grupo">
-    <meta property="og:description" content="Dashboard e relatório interativo de despesas.">
+    <meta property="og:description" content="Dashboard e relatório executivo interativo de despesas.">
     <meta property="og:image" content="favicon.png">
     <meta property="og:type" content="website">
     <link rel="icon" href="favicon.png" type="image/png">
@@ -14,11 +14,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; }
         .card { background: white; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #e2e8f0; }
-        .input-cell { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; outline: none; }
+        .input-cell { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; outline: none; font-size: 0.875rem; }
         .input-cell:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         
         .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; color: #64748b; }
@@ -28,14 +29,14 @@
         @media print {
             body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 24px !important; display: block !important; width: 100% !important; }
-            .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
+            .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
             .print-charts-container { display: block !important; width: 100% !important; }
             .print-charts-container > .card { width: 100% !important; display: block !important; }
             .relative.h-64, .relative.h-80, .relative.h-96 { height: 280px !important; width: 100% !important; }
             canvas { max-width: 100% !important; max-height: 100% !important; width: 100% !important; height: 100% !important; object-fit: contain; }
             .print-page-break { page-break-before: always !important; break-before: page !important; padding-top: 20px; border-top: none !important; }
             
-            #tab-analise, #tab-comparativo, #tab-projecao { display: block !important; }
+            #tab-despesas, #tab-pessoal, #tab-comparativo, #tab-projecao { display: block !important; }
             .tabs-nav { display: none !important; }
             @page { size: A4 portrait; margin: 10mm; }
             .no-print { display: none !important; }
@@ -50,8 +51,8 @@
             <div class="flex items-center">
                 <img src="logo.png" alt="Logo" class="h-10 w-auto mr-4" onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-2xl font-bold">Principais Despesas do Grupo</h1>
-                    <p class="text-slate-500 text-sm mt-1">Ambiente de geração de relatórios.</p>
+                    <h1 class="text-2xl font-bold">Gestão de Despesas do Grupo</h1>
+                    <p class="text-slate-500 text-sm mt-1">Ambiente seguro de preenchimento e geração de relatórios.</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -65,31 +66,37 @@
             </div>
         </div>
 
-        <!-- Área de Gestão de Dados -->
-        <div class="no-print card space-y-4 border-t-4 border-t-blue-500">
-            <div class="flex justify-between items-center border-b pb-4">
-                <h2 class="text-xl font-bold text-slate-800">Entrada de Dados Brutos</h2>
-                <div class="flex gap-2 items-center">
+        <!-- Área de Gestão de Dados (Retrátil) -->
+        <div class="no-print card border-t-4 border-t-blue-500">
+            <div class="flex flex-col lg:flex-row justify-between lg:items-center border-b pb-4 gap-4">
+                <div class="flex items-center gap-2 cursor-pointer group" onclick="toggleFormulario()">
+                    <h2 class="text-xl font-bold text-slate-800 group-hover:text-blue-600 transition">Entrada de Dados Brutos <i id="icon-toggle-form" class="fas fa-chevron-down text-sm ml-2 text-slate-400"></i></h2>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
                     <select id="select-period" class="border border-slate-300 rounded px-3 py-1 bg-white" onchange="carregarFormularioAtual()"></select>
                     <button onclick="abrirModalNovoPeriodo()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded font-semibold transition"><i class="fas fa-plus"></i> Novo Período</button>
                     <button onclick="excluirPeriodo()" class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded font-semibold transition"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-            <div id="area-vazia" class="text-center py-8 text-slate-500 hidden">Nenhum período criado. Clique em "Novo Período" para começar.</div>
-            <div id="area-formulario" class="overflow-x-auto">
-                <table class="w-full text-sm text-left border-collapse">
-                    <thead class="bg-slate-100 text-slate-700">
-                        <tr>
-                            <th class="p-2 border">Loja</th><th class="p-2 border text-center">Nº Func.</th><th class="p-2 border">Faturamento</th>
-                            <th class="p-2 border text-blue-800">Alimentação</th><th class="p-2 border text-blue-800">Caju (VR)</th>
-                            <th class="p-2 border text-amber-800">Combustível</th><th class="p-2 border text-amber-800">Viagem</th>
-                            <th class="p-2 border">Manutenção</th><th class="p-2 border">Brindes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabela-dados"></tbody>
-                </table>
-                <div class="mt-4 flex justify-end">
-                    <button onclick="salvarDados()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 transition"><i class="fas fa-save mr-2"></i>Salvar e Atualizar Gráficos</button>
+            
+            <div id="form-content" class="mt-4 transition-all hidden">
+                <div id="area-vazia" class="text-center py-8 text-slate-500 hidden">Nenhum período criado. Clique em "Novo Período" para começar.</div>
+                <div id="area-formulario" class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="p-2 border">Loja</th><th class="p-2 border text-center">Nº Func.</th><th class="p-2 border">Faturamento</th>
+                                <th class="p-2 border text-emerald-800">Salário</th><th class="p-2 border text-emerald-800">Adiant.</th><th class="p-2 border text-emerald-800">Por Fora</th><th class="p-2 border text-emerald-800">Vale Transp.</th>
+                                <th class="p-2 border text-blue-800">Alimentação</th><th class="p-2 border text-blue-800">Caju (VR)</th>
+                                <th class="p-2 border text-amber-800">Combustível</th><th class="p-2 border text-amber-800">Viagem</th>
+                                <th class="p-2 border">Manutenção</th><th class="p-2 border">Brindes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-dados"></tbody>
+                    </table>
+                    <div class="mt-4 flex justify-end">
+                        <button onclick="salvarDados()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 transition"><i class="fas fa-save mr-2"></i>Salvar e Atualizar Gráficos</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,13 +113,14 @@
 
             <!-- Navegação de Abas -->
             <div class="tabs-nav no-print flex border-b border-slate-300 mb-6 bg-white rounded-t-lg px-4 pt-2 overflow-x-auto">
-                <button onclick="switchTab('analise')" id="btn-tab-analise" class="tab-btn active whitespace-nowrap">Análise do Período</button>
+                <button onclick="switchTab('despesas')" id="btn-tab-despesas" class="tab-btn active whitespace-nowrap">Principais Despesas</button>
+                <button onclick="switchTab('pessoal')" id="btn-tab-pessoal" class="tab-btn whitespace-nowrap">Eficiência de Pessoal</button>
                 <button onclick="switchTab('comparativo')" id="btn-tab-comparativo" class="tab-btn whitespace-nowrap">Análise Comparativa</button>
                 <button onclick="switchTab('projecao')" id="btn-tab-projecao" class="tab-btn whitespace-nowrap">Projeções</button>
             </div>
 
-            <!-- ABA 1: Análise do Período -->
-            <div id="tab-analise">
+            <!-- ABA 1: Principais Despesas -->
+            <div id="tab-despesas">
                 <div class="kpi-container grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div class="card bg-blue-50 border-blue-200"><p class="text-xs font-semibold text-blue-800">Média Alim. Mensal/Func.</p><h3 class="text-xl font-bold text-blue-900 mt-1" id="kpi-alim">--</h3></div>
                     <div class="card bg-amber-50 border-amber-200"><p class="text-xs font-semibold text-amber-800" id="lbl-kpi-comb">Média Combustível</p><h3 class="text-xl font-bold text-amber-900 mt-1" id="kpi-comb">--</h3></div>
@@ -120,15 +128,35 @@
                     <div class="card bg-emerald-50 border-emerald-200"><p class="text-xs font-semibold text-emerald-800">Média Brindes</p><h3 class="text-xl font-bold text-emerald-900 mt-1" id="kpi-brindes">--</h3></div>
                 </div>
 
-                <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div class="card"><h3 class="text-md font-bold mb-1">Desvio: Alimentação Geral Mensal</h3><p class="text-xs text-slate-500 mb-4">Diferença para a "Média Permitida" (R$). Negativo = Acima.</p><div class="relative h-64"><canvas id="devAlimChart"></canvas></div></div>
-                    <div class="card"><h3 class="text-md font-bold mb-1">Gasto: Alimentação Geral Mensal (R$/Func)</h3><p class="text-xs text-slate-500 mb-4">Valor por funcionário ao mês. Linha indica média.</p><div class="relative h-64"><canvas id="barAlimChart"></canvas></div></div>
-                    <div class="card"><h3 class="text-md font-bold mb-1" id="lbl-chart-comb">Combustível</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barCombChart"></canvas></div></div>
-                    <div class="card"><h3 class="text-md font-bold mb-1">Manutenção de Veículo</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barManutChart"></canvas></div></div>
-                    <div class="card print-full"><h3 class="text-md font-bold mb-1">Brindes</h3><p class="text-xs text-slate-500 mb-4">% do Faturamento total. Linha indica média.</p><div class="relative h-64"><canvas id="barBrindesChart"></canvas></div></div>
+                <div class="print-charts-container grid grid-cols-1 gap-8 mb-8">
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1">Desvio: Alimentação Geral Mensal (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Diferença exata em Reais (R$) entre o gasto da loja com refeições e a média do grupo. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Valores positivos (azul) representam economia contra a média. Negativos (vermelho) indicam gasto além da cota média.</p>
+                        <div class="relative h-64"><canvas id="devAlimChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Gasto: Alimentação Geral Mensal (R$/Func)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Valor total de supermercado/refeição dividido por indivíduo no mês. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Quanto menor a barra (abaixo da linha tracejada de média), mais eficiente e controlada é a gestão de insumos da loja.</p>
+                        <div class="relative h-64"><canvas id="barAlimChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1" id="lbl-chart-comb">Combustível</h3>
+                        <p class="text-xs text-slate-500 mb-4">Custo logístico (abastecimento e deslocamento) proporcional ao faturamento bruto. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Quanto menor a porcentagem em relação à média, mais rentável e otimizado é o roteiro de entrega.</p>
+                        <div class="relative h-64"><canvas id="barCombChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Manutenção de Veículo</h3>
+                        <p class="text-xs text-slate-500 mb-4">Despesa corretiva e preventiva de frota proporcional ao faturamento bruto. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Barras destacadas muito acima da linha alertam rapidamente para frotas envelhecidas, uso severo ou falta de zelo com revisões.</p>
+                        <div class="relative h-64"><canvas id="barManutChart"></canvas></div>
+                    </div>
+                    <div class="card print-full">
+                        <h3 class="text-md font-bold mb-1">Brindes</h3>
+                        <p class="text-xs text-slate-500 mb-4">Custo de presentes e bonificações para clientes em proporção ao faturamento bruto. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Mede o custo do relacionamento local. Quanto menor, menos a margem de lucro final é comprometida para reter clientes.</p>
+                        <div class="relative h-64"><canvas id="barBrindesChart"></canvas></div>
+                    </div>
                 </div>
 
-                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica</h2>
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica: Operação</h2>
                 <div class="print-charts-container grid grid-cols-1 gap-8">
                     <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Alimentação Mensal / Func. (R$)</h3><div class="relative h-80"><canvas id="evoAlimChart"></canvas></div></div>
                     <div class="card"><h3 class="text-md font-bold mb-4" id="lbl-evo-comb">Evolução: Combustível (%)</h3><div class="relative h-80"><canvas id="evoCombChart"></canvas></div></div>
@@ -137,87 +165,139 @@
                 </div>
             </div>
 
-            <!-- ABA 2: Análise Comparativa -->
+            <!-- ABA 2: Eficiência de Pessoal -->
+            <div id="tab-pessoal" class="hidden">
+                <div class="kpi-container grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="card bg-indigo-50 border-indigo-200"><p class="text-xs font-semibold text-indigo-800">Média Custo da Equipe (% Fat)</p><h3 class="text-xl font-bold text-indigo-900 mt-1" id="kpi-custo-rh">--</h3></div>
+                    <div class="card bg-teal-50 border-teal-200"><p class="text-xs font-semibold text-teal-800">Média Mensal por Funcionário</p><h3 class="text-xl font-bold text-teal-900 mt-1" id="kpi-custo-func">--</h3></div>
+                    <div class="card bg-fuchsia-50 border-fuchsia-200"><p class="text-xs font-semibold text-fuchsia-800">ROI Pessoal Médio</p><h3 class="text-xl font-bold text-fuchsia-900 mt-1" id="kpi-roi">--</h3></div>
+                </div>
+
+                <div class="print-charts-container grid grid-cols-1 gap-8 mb-8">
+                    <div class="card">
+                        <h3 class="text-md font-bold mb-1">Custo da Equipe (% do Faturamento)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Soma integral (Salário + Adiantamento + Por Fora + Vale Transporte + VR Caju). <br><span class="text-blue-600 font-bold">▶ O que indica:</span> A fatia de caixa que a loja utiliza apenas para pagar o seu quadro de pessoas. Quanto MENOR a porcentagem, mais rentável a operação.</p>
+                        <div class="relative h-80"><canvas id="barCustoRHChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Custo Médio Mensal por Funcionário (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Custo da Equipe fatiado pelos meses do período e dividido pelo número de funcionários ativos na loja. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Valores acima da linha de média revelam salários ou comissões infladas frente à rede. Valores baixos apontam economia (ou defasagem).</p>
+                        <div class="relative h-80"><canvas id="barCustoFuncChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">ROI Pessoal (Retorno Sobre o Investimento em Salário)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Faturamento bruto dividido pelo Custo da Equipe. <br><span class="text-blue-600 font-bold">▶ O que indica:</span> Mede o Retorno (ROI) bruto da equipe. Mostra quantos Reais (R$) a equipe gera em vendas para pagar e justificar cada R$ 1,00 gasto com ela. Quanto MAIOR, melhor.</p>
+                        <div class="relative h-80"><canvas id="barRoiChart"></canvas></div>
+                    </div>
+                </div>
+
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Evolução Histórica: Pessoal</h2>
+                <div class="print-charts-container grid grid-cols-1 gap-8">
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Custo da Equipe (%)</h3><div class="relative h-80"><canvas id="evoCustoRHChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: Custo Médio Mensal por Funcionário (R$)</h3><div class="relative h-80"><canvas id="evoCustoFuncChart"></canvas></div></div>
+                    <div class="card"><h3 class="text-md font-bold mb-4">Evolução: ROI Pessoal (R$)</h3><div class="relative h-80"><canvas id="evoRoiChart"></canvas></div></div>
+                </div>
+            </div>
+
+            <!-- ABA 3: Análise Comparativa -->
             <div id="tab-comparativo" class="hidden">
                 <h2 class="print-page-break text-xl font-bold text-slate-700 mb-4 border-b pb-2">Análise Comparativa Direta (A vs B)</h2>
                 
-                <div class="no-print bg-white p-4 rounded border mb-6 flex flex-wrap gap-4 items-center justify-center lg:justify-start">
-                    <div class="flex items-center gap-2 lg:border-r pr-4">
-                        <span class="font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded">A</span>
-                        <select id="comp-loja-1" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
-                        <select id="comp-periodo-1" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
-                    </div>
-                    <div class="flex items-center gap-2 font-bold text-slate-400">VERSUS</div>
-                    <div class="flex items-center gap-2 lg:pl-4">
-                        <span class="font-bold text-red-600 bg-red-100 px-2 py-1 rounded">B</span>
-                        <select id="comp-loja-2" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
-                        <select id="comp-periodo-2" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                <div class="no-print bg-white p-4 rounded border mb-6 flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded">A</span>
+                            <select id="comp-loja-1" class="border rounded px-2 py-1 bg-white font-semibold" onchange="atualizarAbaComparativa()"></select>
+                            <select id="comp-periodo-1" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                        </div>
+                        <div class="font-bold text-slate-300">VS</div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-red-600 bg-red-100 px-2 py-1 rounded">B</span>
+                            <select id="comp-loja-2" class="border rounded px-2 py-1 bg-white font-semibold" onchange="atualizarAbaComparativa()"></select>
+                            <select id="comp-periodo-2" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaComparativa()"></select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- ALERTA DE PROJEÇÃO ANUAL -->
-                <div id="aviso-projecao-comp" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>Aviso: Um ou ambos os períodos selecionados possuem menos de 12 meses. A comparação anual exibida abaixo é uma projeção baseada no ritmo de gastos (Run Rate).
+                <div id="aviso-viagem-comp" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Atenção: Os períodos comparados possuem estruturas de despesa diferentes (um deles inclui Viagem). O comparativo unificado de Combustível ficará distorcido.
+                </div>
+                <div id="aviso-meses-comp" class="hidden bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded text-sm font-semibold">
+                    <i class="fas fa-info-circle mr-2"></i>Nota: Você está comparando períodos com durações diferentes (ex: semestre vs ano). As porcentagens de faturamento e médias mensais são confiáveis, mas a comparação absoluta pode conter falhas de sazonalidade.
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 print-page-break">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 print-page-break">
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Custo da Equipe (% Fat)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-custo-rh-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-custo-rh-2">--</div>
+                        </div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">Custo Mensal / Funcionário</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-custo-func-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-custo-func-2">--</div>
+                        </div>
+                    </div>
+                    <div class="card p-4 text-center">
+                        <h4 class="text-xs font-bold text-slate-500 mb-2">ROI Pessoal (R$ Venda / R$ 1)</h4>
+                        <div class="flex justify-between items-center px-2">
+                            <div class="text-blue-600 font-bold text-lg" id="comp-roi-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-roi-2">--</div>
+                        </div>
+                    </div>
                     <div class="card p-4 text-center">
                         <h4 class="text-xs font-bold text-slate-500 mb-2">Alimentação (R$/Func)</h4>
                         <div class="flex justify-between items-center px-2">
-                            <div class="text-blue-600 font-bold text-lg" id="comp-alim-1">--</div>
-                            <div class="text-slate-300 text-xs mx-2">vs</div>
-                            <div class="text-red-500 font-bold text-lg" id="comp-alim-2">--</div>
+                            <div class="text-blue-600 font-bold text-lg" id="comp-alim-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-alim-2">--</div>
                         </div>
                     </div>
                     <div class="card p-4 text-center">
                         <h4 class="text-xs font-bold text-slate-500 mb-2">Combustível + Viagem (% Fat)</h4>
                         <div class="flex justify-between items-center px-2">
-                            <div class="text-blue-600 font-bold text-lg" id="comp-comb-1">--</div>
-                            <div class="text-slate-300 text-xs mx-2">vs</div>
-                            <div class="text-red-500 font-bold text-lg" id="comp-comb-2">--</div>
+                            <div class="text-blue-600 font-bold text-lg" id="comp-comb-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-comb-2">--</div>
                         </div>
                     </div>
                     <div class="card p-4 text-center">
                         <h4 class="text-xs font-bold text-slate-500 mb-2">Manutenção (% Fat)</h4>
                         <div class="flex justify-between items-center px-2">
-                            <div class="text-blue-600 font-bold text-lg" id="comp-man-1">--</div>
-                            <div class="text-slate-300 text-xs mx-2">vs</div>
-                            <div class="text-red-500 font-bold text-lg" id="comp-man-2">--</div>
-                        </div>
-                    </div>
-                    <div class="card p-4 text-center">
-                        <h4 class="text-xs font-bold text-slate-500 mb-2">Brindes (% Fat)</h4>
-                        <div class="flex justify-between items-center px-2">
-                            <div class="text-blue-600 font-bold text-lg" id="comp-bri-1">--</div>
-                            <div class="text-slate-300 text-xs mx-2">vs</div>
-                            <div class="text-red-500 font-bold text-lg" id="comp-bri-2">--</div>
+                            <div class="text-blue-600 font-bold text-lg" id="comp-man-1">--</div><div class="text-slate-300 text-xs mx-2">vs</div><div class="text-red-500 font-bold text-lg" id="comp-man-2">--</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Gráfico de Comparação Mensal -->
-                <div class="card mb-8">
-                    <h3 class="text-md font-bold mb-1">Custo Médio Mensal (R$)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Compara o valor absoluto gasto por mês nas rubricas, nivelando as operações de diferentes tamanhos temporais.</p>
-                    <div class="relative h-80"><canvas id="compChart"></canvas></div>
-                </div>
-
-                <!-- Gráfico de Comparação Anualizada -->
-                <div class="card mb-8 print-page-break">
-                    <h3 class="text-md font-bold mb-1">Custo Anualizado (R$)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Projeta o gasto de cada despesa individual para 12 meses, revelando o impacto a longo prazo de cada linha.</p>
-                    <div class="relative h-80"><canvas id="compAnualItemChart"></canvas></div>
-                </div>
-
-                <!-- Gráfico de Comparação Anualizada Total -->
-                <div class="card mb-8 print-page-break">
-                    <h3 class="text-md font-bold mb-1">Impacto Anualizado da Operação (R$)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Compara o custo financeiro total anualizado (Alimentação + Combustível + Manutenção + Brindes) em ambas as seleções.</p>
-                    <div class="relative h-80"><canvas id="compAnualChart"></canvas></div>
+                <div class="print-charts-container grid grid-cols-1 gap-8 mb-8">
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Custo da Equipe (% Fat)</h3>
+                        <div class="relative h-64"><canvas id="compCustoRHChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Custo Mensal / Funcionário (R$)</h3>
+                        <div class="relative h-64"><canvas id="compCustoFuncChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">ROI Pessoal</h3>
+                        <div class="relative h-64"><canvas id="compRoiChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Alimentação (R$/Func)</h3>
+                        <div class="relative h-64"><canvas id="compAlimChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Combustível + Viagem (% Fat)</h3>
+                        <div class="relative h-64"><canvas id="compCombChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Manutenção (% Fat)</h3>
+                        <div class="relative h-64"><canvas id="compManutChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break">
+                        <h3 class="text-md font-bold mb-1">Brindes (% Fat)</h3>
+                        <div class="relative h-64"><canvas id="compBrindesChart"></canvas></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ABA 3: Projeções (Run Rate) -->
+            <!-- ABA 4: Projeções (Run Rate) -->
             <div id="tab-projecao" class="hidden">
                 <h2 class="print-page-break text-xl font-bold text-slate-700 mb-4 border-b pb-2">Projeção Anual de Fechamento (Run Rate)</h2>
                 
@@ -227,33 +307,56 @@
                     <label class="text-sm font-semibold ml-4">Comparar contra o período:</label>
                     <select id="proj-compare" class="border rounded px-2 py-1 bg-white" onchange="atualizarAbaProjecoes()"></select>
                 </div>
+                
+                <div id="aviso-mesmo-periodo" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Atenção: Você selecionou o mesmo período como base e comparativo. A variação calculada será nula (R$ 0). Selecione períodos distintos para gerar comparações.
+                </div>
 
                 <div id="aviso-viagem" class="hidden bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded text-sm font-semibold">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>Atenção: Um dos períodos selecionados não inclui Despesas de Viagem no cálculo de combustível. A rubrica comparativa será afetada.
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Atenção: Um dos períodos selecionados não possui dados de Viagem. O comparativo desta despesa será afetado e poderá distorcer as métricas unificadas de Combustível.
                 </div>
 
                 <div class="card mb-8 print-page-break">
                     <h3 class="text-md font-bold mb-1">Variação Projetada Consolidada: Custo Total (R$)</h3>
-                    <p class="text-xs text-slate-500 mb-4">Calcula a tendência anual (Todas as Despesas) do período base e subtrai da comparação. <span class="text-red-500 font-bold">Vermelho = Excesso.</span></p>
+                    <p class="text-xs text-slate-500 mb-4">Calcula a tendência anual total do período base e subtrai do período de comparação. <br><span class="text-blue-600 font-bold">▶ Como interpretar:</span> Barras VERMELHAS para cima = Alerta de aumento projetado nos custos. Barras AZUIS para baixo = Cenário de economia absoluta para o caixa da empresa.</p>
                     <div class="relative h-80"><canvas id="projTotalChart"></canvas></div>
                 </div>
 
-                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Projeções Individuais por Despesa</h2>
-                <div class="print-charts-container grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div class="card">
+                <h2 class="print-page-break text-xl font-bold text-slate-700 mt-12 mb-4 border-b pb-2">Projeções Individuais por Despesa e Índices</h2>
+                <div class="print-charts-container flex flex-col gap-8 mb-8">
+                    <div class="card print-page-break w-full">
+                        <h3 class="text-md font-bold mb-1">Variação Projetada: Custo da Equipe (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Positivo (vermelho) indica inchaço projetado de salários/comissões no ano. Negativo (azul) indica economia na folha.</p>
+                        <div class="relative h-64"><canvas id="projEquipeChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break w-full">
+                        <h3 class="text-md font-bold mb-1">Variação: Custo Médio Mensal por Funcionário (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Diferença direta da média por funcionário entre os períodos (não é anualizado). Positivo (vermelho) indica que o custo por cabeça aumentou.</p>
+                        <div class="relative h-64"><canvas id="projCustoFuncChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break w-full">
+                        <h3 class="text-md font-bold mb-1">Variação: ROI Pessoal (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Diferença direta do Retorno sobre Investimento (não é anualizado). Positivo (azul) indica que a equipe passou a gerar mais receita por R$ 1 pago. Negativo (vermelho) indica perda de eficiência.</p>
+                        <div class="relative h-64"><canvas id="projRoiChart"></canvas></div>
+                    </div>
+                    <div class="card print-page-break w-full">
                         <h3 class="text-md font-bold mb-1">Variação Projetada: Alimentação (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Positivo indica aumento e estouro financeiro projetado nos gastos com insumos e refeição para 12 meses.</p>
                         <div class="relative h-64"><canvas id="projAlimChart"></canvas></div>
                     </div>
-                    <div class="card">
+                    <div class="card print-page-break w-full">
                         <h3 class="text-md font-bold mb-1" id="lbl-proj-comb">Variação Projetada: Combustível (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Diferença consolidada da tendência de gastos logísticos projetada (na bomba e despesas da estrada).</p>
                         <div class="relative h-64"><canvas id="projCombChart"></canvas></div>
                     </div>
-                    <div class="card">
+                    <div class="card print-page-break w-full">
                         <h3 class="text-md font-bold mb-1">Variação Projetada: Manutenção (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Aumento ou economia absoluta nas faturas corretivas e preventivas da frota para os próximos 12 meses.</p>
                         <div class="relative h-64"><canvas id="projManutChart"></canvas></div>
                     </div>
-                    <div class="card">
+                    <div class="card print-page-break w-full">
                         <h3 class="text-md font-bold mb-1">Variação Projetada: Brindes (R$)</h3>
+                        <p class="text-xs text-slate-500 mb-4">Diferença projetada na injeção monetária para presentes e bonificações para clientes em 12 meses.</p>
                         <div class="relative h-64"><canvas id="projBrindesChart"></canvas></div>
                     </div>
                 </div>
@@ -284,11 +387,31 @@
         let renderCache = null;
         const colors = { blue: '#3b82f6', red: '#ef4444', green: '#10b981', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
 
-        try { if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); } catch(e) {}
+        try { 
+            if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); 
+            if (typeof ChartDataLabels !== 'undefined') {
+                Chart.register(ChartDataLabels);
+                Chart.defaults.set('plugins.datalabels', { display: false });
+            }
+        } catch(e) {}
 
         function setText(id, text) {
             const el = document.getElementById(id);
             if(el) el.innerText = text;
+        }
+
+        function toggleFormulario() {
+            const container = document.getElementById('form-content');
+            const icon = document.getElementById('icon-toggle-form');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                container.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
         }
 
         function init() {
@@ -323,13 +446,13 @@
             return 'Combustível + Viagem';
         }
 
-        // ================= FUNÇÕES DE FORMATAÇÃO E CÁLCULO EFETIVO =================
         function limparNumero(str) {
             if(typeof str === 'number') return str;
             if(!str) return 0;
-            let s = str.toString().trim();
-            if(s.includes('R$')) { s = s.replace(/[R$\s\.]/g, '').replace(',', '.'); return parseFloat(s) || 0; }
-            if(s.includes(',')) { s = s.replace(/\./g, '').replace(',', '.'); }
+            let s = str.toString().trim().replace(/[R$\s]/g, '');
+            if(s.includes(',')) { 
+                s = s.replace(/\./g, '').replace(',', '.'); 
+            }
             return parseFloat(s) || 0;
         }
 
@@ -339,7 +462,20 @@
         }
 
         function onFocusMoeda(el) { let val = limparNumero(el.value); el.value = val === 0 ? '' : val; }
-        function onBlurMoeda(el) { let num = limparNumero(el.value); el.value = formatarVisual(num); }
+        
+        function onBlurMoeda(el) { 
+            let num = limparNumero(el.value); 
+            el.value = formatarVisual(num);
+            
+            // Auto-save embutido
+            const p = getPeriodoAtual();
+            if(p) {
+                const campo = el.getAttribute('data-campo');
+                const loja = el.getAttribute('data-loja');
+                p.dados[loja][campo] = num;
+                salvarDB();
+            }
+        }
 
         function getDadosEfetivos(p) {
             const efetivos = {};
@@ -362,29 +498,38 @@
 
             LOJAS.forEach(l => {
                 const d = p.dados[l] || {};
-                const alimBase = parseFloat(d.alim) || 0;
-                const combBase = parseFloat(d.comb) || 0;
-                const viagemBase = parseFloat(d.viagem) || 0;
                 const func = parseFloat(d.func) || 0;
-                const cajuRate = grupoVisconde.includes(l) ? cRateVisc : (grupoMorada.includes(l) ? cRateMorada : 0);
+                const fat = parseFloat(d.fat) || 0;
+                const alim = parseFloat(d.alim) || 0;
+                const comb = parseFloat(d.comb) || 0;
+                const viagem = parseFloat(d.viagem) || 0;
+                const manut = parseFloat(d.manut) || 0;
+                const brindes = parseFloat(d.brindes) || 0;
+                const salario = parseFloat(d.salario) || 0;
+                const adiantamento = parseFloat(d.adiantamento) || 0;
+                const por_fora = parseFloat(d.por_fora) || 0;
+                const vt = parseFloat(d.vt) || 0;
+                
+                const cajuEfetivo = grupoVisconde.includes(l) ? (cRateVisc * func) : (grupoMorada.includes(l) ? (cRateMorada * func) : 0);
+                const custoRH = salario + adiantamento + por_fora + vt + cajuEfetivo;
                 
                 efetivos[l] = {
-                    func: func, fat: parseFloat(d.fat) || 0,
-                    alim: alimBase + (cajuRate * func),
-                    comb: combBase + viagemBase,
-                    manut: parseFloat(d.manut) || 0, brindes: parseFloat(d.brindes) || 0
+                    func, fat, alim, cajuEfetivo,
+                    comb: comb + viagem,
+                    manut, brindes, custoRH
                 };
             });
             return efetivos;
         }
 
-        // ================= CONTROLES DE INTERFACE =================
         function switchTab(tabId) {
-            document.getElementById('tab-analise').classList.add('hidden');
+            document.getElementById('tab-despesas').classList.add('hidden');
+            document.getElementById('tab-pessoal').classList.add('hidden');
             document.getElementById('tab-comparativo').classList.add('hidden');
             document.getElementById('tab-projecao').classList.add('hidden');
             
-            document.getElementById('btn-tab-analise').classList.remove('active');
+            document.getElementById('btn-tab-despesas').classList.remove('active');
+            document.getElementById('btn-tab-pessoal').classList.remove('active');
             document.getElementById('btn-tab-comparativo').classList.remove('active');
             document.getElementById('btn-tab-projecao').classList.remove('active');
             
@@ -433,7 +578,7 @@
             if(!nome || !meses) return alert("Preencha os campos!");
             
             const novo = { id: Date.now().toString(), nome: nome, meses: meses, dados: {} };
-            LOJAS.forEach(l => novo.dados[l] = { func: 0, fat: 0, alim: 0, caju: 0, comb: 0, viagem: 0, manut: 0, brindes: 0 });
+            LOJAS.forEach(l => novo.dados[l] = { func:0, fat:0, alim:0, caju:0, comb:0, viagem:0, manut:0, brindes:0, salario:0, adiantamento:0, por_fora:0, vt:0 });
             db.periodos.push(novo);
             salvarDB(); atualizarSelectPeriodos();
             document.getElementById('select-period').value = novo.id;
@@ -469,7 +614,7 @@
             const tbody = document.getElementById('tabela-dados');
             tbody.innerHTML = '';
             LOJAS.forEach(l => {
-                const d = p.dados[l] || { func: 0, fat: 0, alim: 0, caju: 0, comb: 0, viagem: 0, manut: 0, brindes: 0 };
+                const d = p.dados[l] || { func:0, fat:0, alim:0, caju:0, comb:0, viagem:0, manut:0, brindes:0, salario:0, adiantamento:0, por_fora:0, vt:0 };
                 
                 let tdCaju = `<td class="p-1 border text-center text-slate-300 bg-slate-50">-</td>`;
                 if (l === 'Morada' || l === 'Visconde') {
@@ -481,6 +626,12 @@
                     <td class="p-2 border font-semibold">${l}</td>
                     <td class="p-1 border"><input type="number" class="input-cell text-center" data-loja="${l}" data-campo="func" value="${d.func || 0}"></td>
                     <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="fat" value="${formatarVisual(d.fat)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-emerald-50 border-emerald-200" data-loja="${l}" data-campo="salario" value="${formatarVisual(d.salario)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-emerald-50 border-emerald-200" data-loja="${l}" data-campo="adiantamento" value="${formatarVisual(d.adiantamento)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-emerald-50 border-emerald-200" data-loja="${l}" data-campo="por_fora" value="${formatarVisual(d.por_fora)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+                    <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right bg-emerald-50 border-emerald-200" data-loja="${l}" data-campo="vt" value="${formatarVisual(d.vt)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
+
                     <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="alim" value="${formatarVisual(d.alim)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
                     ${tdCaju}
                     <td class="p-1 border"><input type="text" inputmode="decimal" class="input-cell text-right" data-loja="${l}" data-campo="comb" value="${formatarVisual(d.comb)}" onfocus="onFocusMoeda(this)" onblur="onBlurMoeda(this)"></td>
@@ -515,34 +666,46 @@
             const cData = { periodos: [], grupo: {}, dadosPorPeriodo: {} };
             db.periodos.forEach(p => {
                 cData.periodos.push(p.nome);
-                let sf=0, sfat=0, sa=0, sc=0, sm=0, sb=0;
-                const pt = { alim_dev:[], alim_func:[], comb:[], comb_rs:[], manut:[], manut_rs:[], brindes:[], brindes_rs:[], custo_total: [] };
+                let sf=0, sfat=0, sa=0, sc=0, sm=0, sb=0, scustoRH=0;
+                const pt = { alim_dev:[], alim_func:[], comb:[], comb_rs:[], manut:[], manut_rs:[], brindes:[], brindes_rs:[], custo_rh_fat:[], custo_cabeca:[], roi_pessoal:[], func_count:[], custo_rh_rs:[] };
 
                 const efetivos = getDadosEfetivos(p);
 
                 LOJAS.forEach(l => {
                     const e = efetivos[l];
-                    sf+=e.func; sfat+=e.fat; sa+=e.alim; sc+=e.comb; sm+=e.manut; sb+=e.brindes;
+                    sf+=e.func; sfat+=e.fat; sa+=e.alim; sc+=e.comb; sm+=e.manut; sb+=e.brindes; scustoRH+=e.custoRH;
                 });
 
                 const mediaGrpAlim = p.meses > 0 ? (sa/p.meses) : 0;
                 const mediaGrpAlimF = sf > 0 ? (mediaGrpAlim/sf) : 0;
+                const mediaGrpRHMensal = p.meses > 0 ? (scustoRH / p.meses) : 0;
                 
                 cData.grupo[p.nome] = {
                     alim_func: mediaGrpAlimF, comb: sfat>0 ? (sc/sfat)*100 : 0,
-                    manut: sfat>0 ? (sm/sfat)*100 : 0, brindes: sfat>0 ? (sb/sfat)*100 : 0
+                    manut: sfat>0 ? (sm/sfat)*100 : 0, brindes: sfat>0 ? (sb/sfat)*100 : 0,
+                    custo_rh_fat: sfat>0 ? (scustoRH/sfat)*100 : 0,
+                    custo_cabeca: sf>0 ? (mediaGrpRHMensal/sf) : 0,
+                    roi_pessoal: scustoRH>0 ? (sfat/scustoRH) : 0
                 };
 
                 LOJAS.forEach(l => {
                     const e = efetivos[l];
                     const gastoAlimMensal = p.meses > 0 ? (e.alim / p.meses) : 0;
                     const gastoAlimMensalFunc = e.func > 0 ? (gastoAlimMensal / e.func) : 0;
+                    const gastoRHMensal = p.meses > 0 ? (e.custoRH / p.meses) : 0;
                     const metaAlimMensalLoja = mediaGrpAlimF * e.func;
+                    
                     pt.alim_func.push(gastoAlimMensalFunc);
                     pt.alim_dev.push(metaAlimMensalLoja - gastoAlimMensal);
                     pt.comb.push(e.fat>0 ? (e.comb/e.fat)*100 : 0); pt.comb_rs.push(e.comb);
                     pt.manut.push(e.fat>0 ? (e.manut/e.fat)*100 : 0); pt.manut_rs.push(e.manut);
                     pt.brindes.push(e.fat>0 ? (e.brindes/e.fat)*100 : 0); pt.brindes_rs.push(e.brindes);
+                    
+                    pt.func_count.push(e.func);
+                    pt.custo_rh_rs.push(e.custoRH);
+                    pt.custo_rh_fat.push(e.fat>0 ? (e.custoRH/e.fat)*100 : 0);
+                    pt.custo_cabeca.push(e.func>0 ? (gastoRHMensal/e.func) : 0);
+                    pt.roi_pessoal.push(e.custoRH>0 ? (e.fat/e.custoRH) : 0);
                 });
                 cData.dadosPorPeriodo[p.nome] = pt;
             });
@@ -564,111 +727,95 @@
             const p2 = db.periodos.find(x => x.id === p2Id);
             if(!p1 || !p2) return;
 
+            const rotuloComb1 = obterRotuloCombustivel(p1.nome);
+            const rotuloComb2 = obterRotuloCombustivel(p2.nome);
+            
+            const avisoViagemComp = document.getElementById('aviso-viagem-comp');
+            if (avisoViagemComp) avisoViagemComp.classList.toggle('hidden', rotuloComb1 === rotuloComb2);
+
+            const avisoMesesComp = document.getElementById('aviso-meses-comp');
+            if (avisoMesesComp) avisoMesesComp.classList.toggle('hidden', p1.meses === p2.meses);
+
             const ef1 = getDadosEfetivos(p1)[l1];
             const ef2 = getDadosEfetivos(p2)[l2];
-
-            const alim1 = p1.meses > 0 && ef1.func > 0 ? (ef1.alim / p1.meses) / ef1.func : 0;
-            const alim2 = p2.meses > 0 && ef2.func > 0 ? (ef2.alim / p2.meses) / ef2.func : 0;
-            
-            const comb1 = ef1.fat > 0 ? (ef1.comb / ef1.fat) * 100 : 0;
-            const comb2 = ef2.fat > 0 ? (ef2.comb / ef2.fat) * 100 : 0;
-            
-            const man1 = ef1.fat > 0 ? (ef1.manut / ef1.fat) * 100 : 0;
-            const man2 = ef2.fat > 0 ? (ef2.manut / ef2.fat) * 100 : 0;
-            
-            const bri1 = ef1.fat > 0 ? (ef1.brindes / ef1.fat) * 100 : 0;
-            const bri2 = ef2.fat > 0 ? (ef2.brindes / ef2.fat) * 100 : 0;
-
-            setText('comp-alim-1', 'R$ ' + alim1.toLocaleString('pt-BR', {minimumFractionDigits:2}));
-            setText('comp-alim-2', 'R$ ' + alim2.toLocaleString('pt-BR', {minimumFractionDigits:2}));
-            setText('comp-comb-1', comb1.toFixed(2) + '%');
-            setText('comp-comb-2', comb2.toFixed(2) + '%');
-            setText('comp-man-1', man1.toFixed(2) + '%');
-            setText('comp-man-2', man2.toFixed(2) + '%');
-            setText('comp-bri-1', bri1.toFixed(2) + '%');
-            setText('comp-bri-2', bri2.toFixed(2) + '%');
 
             const m1 = p1.meses || 1;
             const m2 = p2.meses || 1;
 
+            const custoRH1 = ef1.fat > 0 ? (ef1.custoRH / ef1.fat) * 100 : 0;
+            const custoRH2 = ef2.fat > 0 ? (ef2.custoRH / ef2.fat) * 100 : 0;
+            const cabeca1 = ef1.func > 0 ? ((ef1.custoRH/m1) / ef1.func) : 0;
+            const cabeca2 = ef2.func > 0 ? ((ef2.custoRH/m2) / ef2.func) : 0;
+            const roi1 = ef1.custoRH > 0 ? (ef1.fat / ef1.custoRH) : 0;
+            const roi2 = ef2.custoRH > 0 ? (ef2.fat / ef2.custoRH) : 0;
+
+            const alim1 = ef1.func > 0 ? ((ef1.alim / m1) / ef1.func) : 0;
+            const alim2 = ef2.func > 0 ? ((ef2.alim / m2) / ef2.func) : 0;
+            const comb1 = ef1.fat > 0 ? (ef1.comb / ef1.fat) * 100 : 0;
+            const comb2 = ef2.fat > 0 ? (ef2.comb / ef2.fat) * 100 : 0;
+            const man1 = ef1.fat > 0 ? (ef1.manut / ef1.fat) * 100 : 0;
+            const man2 = ef2.fat > 0 ? (ef2.manut / ef2.fat) * 100 : 0;
+            const bri1 = ef1.fat > 0 ? (ef1.brindes / ef1.fat) * 100 : 0;
+            const bri2 = ef2.fat > 0 ? (ef2.brindes / ef2.fat) * 100 : 0;
+
+            setText('comp-custo-rh-1', custoRH1.toFixed(2) + '%'); setText('comp-custo-rh-2', custoRH2.toFixed(2) + '%');
+            setText('comp-custo-func-1', 'R$ ' + cabeca1.toLocaleString('pt-BR', {minimumFractionDigits:2})); setText('comp-custo-func-2', 'R$ ' + cabeca2.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+            setText('comp-roi-1', 'R$ ' + roi1.toFixed(2)); setText('comp-roi-2', 'R$ ' + roi2.toFixed(2));
+            setText('comp-alim-1', 'R$ ' + alim1.toLocaleString('pt-BR', {minimumFractionDigits:2})); setText('comp-alim-2', 'R$ ' + alim2.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+            setText('comp-comb-1', comb1.toFixed(2) + '%'); setText('comp-comb-2', comb2.toFixed(2) + '%');
+            setText('comp-man-1', man1.toFixed(2) + '%'); setText('comp-man-2', man2.toFixed(2) + '%');
+            setText('comp-bri-1', bri1.toFixed(2) + '%'); setText('comp-bri-2', bri2.toFixed(2) + '%');
+
             const lbl1 = `${l1} (${p1.nome})`;
             const lbl2 = `${l2} (${p2.nome})`;
 
-            // Aviso de Projeção Anualizada
-            const elAviso = document.getElementById('aviso-projecao-comp');
-            if (elAviso) {
-                if (m1 < 12 || m2 < 12) elAviso.classList.remove('hidden');
-                else elAviso.classList.add('hidden');
-            }
+            const datasetsComp = [
+                { id: 'compCustoRHChart', data: [custoRH1, custoRH2], isCurr: false },
+                { id: 'compCustoFuncChart', data: [cabeca1, cabeca2], isCurr: true },
+                { id: 'compRoiChart', data: [roi1, roi2], isCurr: true }, 
+                { id: 'compAlimChart', data: [alim1, alim2], isCurr: true },
+                { id: 'compCombChart', data: [comb1, comb2], isCurr: false },
+                { id: 'compManutChart', data: [man1, man2], isCurr: false },
+                { id: 'compBrindesChart', data: [bri1, bri2], isCurr: false }
+            ];
 
-            // Gráfico Mensal
-            const data1 = [ ef1.alim/m1, ef1.comb/m1, ef1.manut/m1, ef1.brindes/m1 ];
-            const data2 = [ ef2.alim/m2, ef2.comb/m2, ef2.manut/m2, ef2.brindes/m2 ];
-
-            if(charts['compChart']) charts['compChart'].destroy();
-            charts['compChart'] = new Chart(document.getElementById('compChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Alimentação', 'Combustível + Viagem', 'Manutenção', 'Brindes'],
-                    datasets: [
-                        { label: lbl1, data: data1, backgroundColor: colors.blue, borderRadius: 4 },
-                        { label: lbl2, data: data2, backgroundColor: colors.red, borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
-                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
-                }
-            });
-
-            // Gráfico Anualizado por Rubrica
-            const dataAnualItem1 = [ (ef1.alim/m1)*12, (ef1.comb/m1)*12, (ef1.manut/m1)*12, (ef1.brindes/m1)*12 ];
-            const dataAnualItem2 = [ (ef2.alim/m2)*12, (ef2.comb/m2)*12, (ef2.manut/m2)*12, (ef2.brindes/m2)*12 ];
-
-            if(charts['compAnualItemChart']) charts['compAnualItemChart'].destroy();
-            charts['compAnualItemChart'] = new Chart(document.getElementById('compAnualItemChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Alimentação', 'Combustível + Viagem', 'Manutenção', 'Brindes'],
-                    datasets: [
-                        { label: lbl1, data: dataAnualItem1, backgroundColor: colors.blue, borderRadius: 4 },
-                        { label: lbl2, data: dataAnualItem2, backgroundColor: colors.red, borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
-                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
-                }
-            });
-
-            // Gráfico Anualizado Total
-            const totalMensal1 = (ef1.alim + ef1.comb + ef1.manut + ef1.brindes) / m1;
-            const totalMensal2 = (ef2.alim + ef2.comb + ef2.manut + ef2.brindes) / m2;
-
-            const anual1 = totalMensal1 * 12;
-            const anual2 = totalMensal2 * 12;
-
-            if(charts['compAnualChart']) charts['compAnualChart'].destroy();
-            charts['compAnualChart'] = new Chart(document.getElementById('compAnualChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Custo Total Anualizado da Operação'],
-                    datasets: [
-                        { label: lbl1, data: [anual1], backgroundColor: colors.blue, borderRadius: 4 },
-                        { label: lbl2, data: [anual2], backgroundColor: colors.red, borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': R$ ' + c.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) } } },
-                    scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
-                }
+            datasetsComp.forEach(c => {
+                if(charts[c.id]) charts[c.id].destroy();
+                charts[c.id] = new Chart(document.getElementById(c.id).getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: [lbl1, lbl2], datasets: [{ data: c.data, backgroundColor: [colors.blue, colors.red], borderRadius: 4 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        layout: { padding: { top: 30 } },
+                        plugins: { 
+                            legend:{display:false}, 
+                            tooltip: { callbacks: { label: ctx => c.isCurr ? 'R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits:2}) : ctx.raw.toFixed(2) + '%' } },
+                            datalabels: {
+                                display: true,
+                                color: '#4b5563',
+                                font: { weight: 'bold', size: 12 },
+                                anchor: 'end',
+                                align: 'top',
+                                offset: 4,
+                                clip: false,
+                                formatter: (v) => {
+                                    if(!v) return '';
+                                    return c.isCurr ? 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0}) : v.toFixed(1) + '%';
+                                }
+                            }
+                        },
+                        scales: { 
+                            y: { 
+                                grace: '10%',
+                                ticks: { callback: v => c.isCurr ? 'R$ ' + v.toLocaleString('pt-BR') : v + '%' } 
+                            } 
+                        }
+                    }
+                });
             });
         }
 
-        // ================= Aba 3 Lógica (Projeção Total + Individual) =================
+        // ================= Aba 4 Lógica (Projeção Total + Individual) =================
         function atualizarAbaProjecoes() {
             if(db.periodos.length < 2) return;
             const elBase = document.getElementById('proj-base');
@@ -677,6 +824,10 @@
             
             const bId = elBase.value;
             const cId = elComp.value;
+
+            const avisoMesmoPeriodo = document.getElementById('aviso-mesmo-periodo');
+            if (avisoMesmoPeriodo) avisoMesmoPeriodo.classList.toggle('hidden', bId !== cId);
+
             const pBase = db.periodos.find(x=>x.id===bId);
             const pComp = db.periodos.find(x=>x.id===cId);
             if(!pBase || !pComp) return;
@@ -689,47 +840,107 @@
             const efetivosBase = getDadosEfetivos(pBase);
             const efetivosComp = getDadosEfetivos(pComp);
 
-            const dataTotal = [], dataAlim = [], dataComb = [], dataManut = [], dataBrindes = [];
+            const dataTotal = [], dataEquipe = [], dataAlim = [], dataComb = [], dataManut = [], dataBrindes = [];
+            const dataCustoFunc = [], dataRoi = [];
+
             LOJAS.forEach(l => {
                 const b = efetivosBase[l], c = efetivosComp[l];
                 const multB = 12 / (pBase.meses || 1);
                 const multC = 12 / (pComp.meses || 1);
                 
+                const isOpB = b.fat > 0 || b.func > 0 || b.alim > 0 || b.comb > 0 || b.manut > 0 || b.brindes > 0;
+                const isOpC = c.fat > 0 || c.func > 0 || c.alim > 0 || c.comb > 0 || c.manut > 0 || c.brindes > 0;
+
+                const isMissEquipe = (isOpB && b.custoRH === 0) || (isOpC && c.custoRH === 0);
+                const isMissFunc = (isOpB && b.func === 0) || (isOpC && c.func === 0) || isMissEquipe;
+                const isMissRoi = (isOpB && b.fat === 0) || (isOpC && c.fat === 0) || isMissEquipe;
+
+                const vEquipe = (b.custoRH * multB) - (c.custoRH * multC);
                 const vAlim = (b.alim * multB) - (c.alim * multC);
                 const vComb = (b.comb * multB) - (c.comb * multC);
                 const vManut = (b.manut * multB) - (c.manut * multC);
                 const vBrindes = (b.brindes * multB) - (c.brindes * multC);
-                
-                dataAlim.push(vAlim);
-                dataComb.push(vComb);
-                dataManut.push(vManut);
-                dataBrindes.push(vBrindes);
-                dataTotal.push(vAlim + vComb + vManut + vBrindes);
+                const vTotal = vEquipe + vAlim + vComb + vManut + vBrindes;
+
+                const baseCustoFunc = b.func > 0 ? (b.custoRH / (pBase.meses || 1)) / b.func : 0;
+                const compCustoFunc = c.func > 0 ? (c.custoRH / (pComp.meses || 1)) / c.func : 0;
+                const vCustoFunc = baseCustoFunc - compCustoFunc;
+
+                const baseRoi = b.custoRH > 0 ? b.fat / b.custoRH : 0;
+                const compRoi = c.custoRH > 0 ? c.fat / c.custoRH : 0;
+                const vRoi = baseRoi - compRoi;
+
+                const makeEntry = (val, isMissing, invertColor = false) => {
+                    if (isMissing) return { val: 0, color: '#e2e8f0', label: 'Falta Dados' };
+                    let color = val > 0 ? colors.red : colors.blue;
+                    if (invertColor) color = val > 0 ? colors.blue : colors.red; 
+                    if (val === 0) color = '#cbd5e1'; 
+                    return { 
+                        val: isMissing ? 0 : val, 
+                        color: color, 
+                        label: val !== 0 && !isMissing ? 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0}) : '' 
+                    };
+                };
+
+                dataTotal.push(makeEntry(vTotal, isMissEquipe));
+                dataEquipe.push(makeEntry(vEquipe, isMissEquipe));
+                dataCustoFunc.push(makeEntry(vCustoFunc, isMissFunc));
+                dataRoi.push(makeEntry(vRoi, isMissRoi, true));
+                dataAlim.push(makeEntry(vAlim, false));
+                dataComb.push(makeEntry(vComb, false));
+                dataManut.push(makeEntry(vManut, false));
+                dataBrindes.push(makeEntry(vBrindes, false));
             });
 
-            const renderProj = (id, dataArr) => {
+            const renderProj = (id, dataObjs) => {
                 const ctx = document.getElementById(id);
                 if(!ctx) return;
                 if(charts[id]) charts[id].destroy();
                 charts[id] = new Chart(ctx.getContext('2d'), {
                     type: 'bar',
-                    data: { labels: LOJAS, datasets: [{ data: dataArr, backgroundColor: dataArr.map(v=>v>0?colors.red:colors.blue), borderRadius: 4 }] },
+                    data: { labels: LOJAS, datasets: [{ data: dataObjs.map(d=>d.val), backgroundColor: dataObjs.map(d=>d.color), borderRadius: 4 }] },
                     options: { 
                         responsive: true, maintainAspectRatio: false, 
-                        plugins: { legend:{display:false}, tooltip: {callbacks:{label:c=>'Variação: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}} },
-                        scales: { y: { ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
+                        layout: { padding: { top: 30 } },
+                        plugins: { 
+                            legend:{display:false}, 
+                            tooltip: {callbacks:{label:c=>{
+                                const obj = dataObjs[c.dataIndex];
+                                if (obj.label === 'Falta Dados') return 'Falta Dados para Cálculo';
+                                return 'Variação: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2});
+                            }}},
+                            datalabels: {
+                                display: true,
+                                color: '#4b5563',
+                                font: { weight: 'bold', size: 11 },
+                                anchor: 'end',
+                                align: 'top',
+                                offset: 4,
+                                clip: false,
+                                formatter: (v, ctx) => dataObjs[ctx.dataIndex].label
+                            }
+                        },
+                        scales: { 
+                            y: { 
+                                grace: '10%',
+                                ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } 
+                            } 
+                        }
                     }
                 });
             };
 
             renderProj('projTotalChart', dataTotal);
+            renderProj('projEquipeChart', dataEquipe);
+            renderProj('projCustoFuncChart', dataCustoFunc);
+            renderProj('projRoiChart', dataRoi);
             renderProj('projAlimChart', dataAlim);
             renderProj('projCombChart', dataComb);
             renderProj('projManutChart', dataManut);
             renderProj('projBrindesChart', dataBrindes);
         }
 
-        // ================= Aba 1 Lógica =================
+        // ================= Aba 1 e 2 Lógica (Dashboards Base) =================
         function atualizarDashboard() {
             if (db.periodos.length === 0) return;
             renderCache = calcularMétricasGlobais();
@@ -754,51 +965,133 @@
             setText('kpi-manut', grp.manut.toFixed(2) + '%');
             setText('kpi-brindes', grp.brindes.toFixed(2) + '%');
 
-            if(!charts['devAlim']) {
-                const elDevAlim = document.getElementById('devAlimChart');
-                if(elDevAlim) {
-                    charts['devAlim'] = new Chart(elDevAlim.getContext('2d'), {
-                        type: 'bar', options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>'Desvio: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}} }, scales: { x:{grid:{color:'#cbd5e1', lineWidth:c=>c.tick.value===0?2:1}} } },
-                        data: { labels: LOJAS, datasets: [] }
-                    });
-                }
-            }
-            if(charts['devAlim']) {
-                charts['devAlim'].data.datasets = [{ data: pData.alim_dev, backgroundColor: pData.alim_dev.map(v=>v>=0?colors.blue:colors.red), borderRadius: 4 }];
-                charts['devAlim'].update();
+            setText('kpi-custo-rh', grp.custo_rh_fat.toFixed(2) + '%');
+            setText('kpi-custo-func', 'R$ ' + grp.custo_cabeca.toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+            setText('kpi-roi', 'R$ ' + grp.roi_pessoal.toFixed(2));
+
+            const elDevAlim = document.getElementById('devAlimChart');
+            if(elDevAlim) {
+                if(charts['devAlim']) charts['devAlim'].destroy();
+                charts['devAlim'] = new Chart(elDevAlim.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: LOJAS, datasets: [{ data: pData.alim_dev, backgroundColor: pData.alim_dev.map(v=>v>=0?colors.blue:colors.red), borderRadius: 4 }] },
+                    options: { 
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
+                        layout: { padding: { left: 55, right: 55 } },
+                        plugins: { 
+                            legend:{display:false}, 
+                            datalabels: {
+                                display: true,
+                                color: '#4b5563',
+                                font: { weight: 'bold', size: 11 },
+                                anchor: 'end',
+                                align: 'end',
+                                offset: 6,
+                                clip: false,
+                                formatter: (v) => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0})
+                            },
+                            tooltip:{callbacks:{label:c=>'Desvio: R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}} 
+                        }, 
+                        scales: { 
+                            x: { grace: '20%', grid:{color:'#cbd5e1', lineWidth:c=>c.tick.value===0?2:1} } 
+                        } 
+                    }
+                });
             }
 
-            const renderBar = (cid, key, color, isPerc, arr, avg, lbl) => {
+            const renderBar = (cid, key, color, isPerc, arr, avg, lbl, isCurrency = false, customLabels = null, showBarLabels = true) => {
                 const el = document.getElementById(cid);
                 if(!el) return;
-                if(!charts[key]) {
-                    charts[key] = new Chart(el.getContext('2d'), {
-                        type: 'bar', options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>{if(!isPerc)return c.dataset.label+': R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}); let pN = ""; if (typeof getPeriodoAtual === 'function' && getPeriodoAtual()) { pN = getPeriodoAtual().nome; } else { const sel=document.getElementById('select-period'); if(sel) pN=sel.options[sel.selectedIndex].text; } if(!pN || !renderCache || !renderCache.dadosPorPeriodo[pN]) return c.dataset.label+': '+c.raw.toFixed(2)+'%'; const pd=renderCache.dadosPorPeriodo[pN]; let rs=0; if(c.dataset.label.includes('Combustível'))rs=pd.comb_rs[c.dataIndex]; if(c.dataset.label.includes('Manutenção'))rs=pd.manut_rs[c.dataIndex]; if(c.dataset.label.includes('Brindes'))rs=pd.brindes_rs[c.dataIndex]; return c.dataset.label+': '+c.raw.toFixed(2)+'% (R$ '+rs.toLocaleString('pt-BR',{minimumFractionDigits:2})+')'}}}}, scales:{y:{ticks:{callback:v=>isPerc?v+'%':'R$ '+v}}} },
-                        data: { labels: LOJAS, datasets: [{backgroundColor: color, data: []}] }
-                    });
+                const chartLabels = customLabels || LOJAS;
+                
+                let datalabelsConfig = { display: false };
+                if(showBarLabels) {
+                    datalabelsConfig = {
+                        display: true, color: '#4b5563', font: { weight: 'bold', size: 12 },
+                        anchor: 'end', align: 'top', offset: 4, clip: false,
+                        formatter: (v) => {
+                            if(!v) return '';
+                            if(isCurrency) return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+                            return v.toFixed(1) + '%';
+                        }
+                    };
                 }
-                const c = charts[key];
-                c.data.datasets[0].data = arr; c.data.datasets[0].label = lbl;
-                c.options.plugins.annotation = { annotations: { avg: { type: 'line', yMin: avg, yMax: avg, borderColor: '#334155', borderWidth: 2, borderDash: [5, 5] } } };
-                c.update();
+                
+                let avgLabel = '';
+                if(isCurrency) avgLabel = 'Média: R$ ' + avg.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+                else if(isPerc) avgLabel = 'Média: ' + avg.toFixed(2) + '%';
+                else avgLabel = 'Média: ' + avg.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+
+                if(charts[key]) charts[key].destroy();
+                charts[key] = new Chart(el.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: chartLabels, datasets: [{backgroundColor: color, data: arr, label: lbl, borderRadius: 4}] },
+                    options: { 
+                        responsive:true, maintainAspectRatio:false, 
+                        layout: { padding: { top: 35 } },
+                        plugins:{
+                            legend:{display:false}, 
+                            datalabels: datalabelsConfig,
+                            tooltip:{
+                                callbacks:{
+                                    label:c=>{
+                                        if(isCurrency) return c.dataset.label+': R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}); 
+                                        if(!isPerc) return c.dataset.label+': '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}); 
+                                        return c.dataset.label+': '+c.raw.toFixed(2)+'%';
+                                    }
+                                }
+                            },
+                            annotation: { 
+                                clip: false,
+                                annotations: { 
+                                    avg: { 
+                                        type: 'line', yMin: avg, yMax: avg, borderColor: '#334155', borderWidth: 2, borderDash: [5, 5],
+                                        label: {
+                                            display: true,
+                                            content: avgLabel,
+                                            position: 'end',
+                                            backgroundColor: '#334155',
+                                            color: 'white',
+                                            font: { size: 11, weight: 'bold' },
+                                            padding: 4,
+                                            yAdjust: (ctx) => {
+                                                const chart = ctx.chart;
+                                                if (!chart.chartArea || !chart.scales.y) return -25;
+                                                const lineY = chart.scales.y.getPixelForValue(avg);
+                                                const topY = chart.chartArea.top;
+                                                return (topY - 15) - lineY;
+                                            }
+                                        }
+                                    } 
+                                } 
+                            }
+                        }, 
+                        scales:{
+                            y: { 
+                                grace: '10%',
+                                ticks:{callback:v=>{if(isCurrency)return 'R$ '+v.toLocaleString('pt-BR'); return isPerc?v+'%':'R$ '+v.toLocaleString('pt-BR')}}
+                            }
+                        } 
+                    }
+                });
             };
 
-            renderBar('barAlimChart', 'barAlim', colors.blue, false, pData.alim_func, grp.alim_func, 'Alimentação (R$/Func)');
-            renderBar('barCombChart', 'barComb', colors.amber, true, pData.comb, grp.comb, rotuloComb + ' (%)');
-            renderBar('barManutChart', 'barManut', colors.rose, true, pData.manut, grp.manut, 'Manutenção (%)');
-            renderBar('barBrindesChart', 'barBrindes', colors.emerald, true, pData.brindes, grp.brindes, 'Brindes (%)');
+            const labelsRH = LOJAS.map((l, i) => `${l} (${pData.func_count[i] || 0} func)`);
 
-            const renderEvo = (cid, key, metric, grpMetric, formatR$) => {
+            renderBar('barCustoRHChart', 'barCustoRH', colors.blue, true, pData.custo_rh_fat, grp.custo_rh_fat, 'Custo da Equipe (% Fat)', false, labelsRH, true);
+            renderBar('barCustoFuncChart', 'barCustoFunc', colors.emerald, false, pData.custo_cabeca, grp.custo_cabeca, 'Custo Mensal / Funcionário (R$)', true, labelsRH, true);
+            renderBar('barRoiChart', 'barRoi', colors.amber, false, pData.roi_pessoal, grp.roi_pessoal, 'ROI Pessoal (Venda por R$ 1 pago)', true, labelsRH, true);
+
+            renderBar('barAlimChart', 'barAlim', colors.blue, false, pData.alim_func, grp.alim_func, 'Alimentação (R$/Func)', true, null, true);
+            renderBar('barCombChart', 'barComb', colors.amber, true, pData.comb, grp.comb, rotuloComb + ' (%)', false, null, true);
+            renderBar('barManutChart', 'barManut', colors.rose, true, pData.manut, grp.manut, 'Manutenção (%)', false, null, true);
+            renderBar('barBrindesChart', 'barBrindes', colors.emerald, true, pData.brindes, grp.brindes, 'Brindes (%)', false, null, true);
+
+            const renderEvo = (cid, key, metric, grpMetric, formatR$, isRH = false) => {
                 const el = document.getElementById(cid);
                 if(!el) return;
-                if(!charts[key]) {
-                    charts[key] = new Chart(el.getContext('2d'), {
-                        type: 'line', options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+(formatR$?'R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}):c.raw.toFixed(2)+'%')}}} },
-                        data: { labels: [], datasets: [] }
-                    });
-                }
-                const c = charts[key];
-                c.data.labels = renderCache.periodos;
+                if(charts[key]) charts[key].destroy();
+                
                 const ds = LOJAS.map((loja, idx) => ({
                     label: loja,
                     data: renderCache.periodos.map(per => renderCache.dadosPorPeriodo[per][metric][idx]),
@@ -809,9 +1102,34 @@
                     data: renderCache.periodos.map(per => renderCache.grupo[per][grpMetric]),
                     borderColor: colors.slate, borderWidth: 4, borderDash: [5, 5], tension: 0.1
                 });
-                c.data.datasets = ds;
-                c.update();
+                
+                charts[key] = new Chart(el.getContext('2d'), {
+                    type: 'line', 
+                    data: { labels: renderCache.periodos, datasets: ds },
+                    options: { 
+                        responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, 
+                        plugins:{
+                            datalabels: { display: false },
+                            tooltip:{
+                                callbacks:{
+                                    label:c=>{
+                                        let suffix = '';
+                                        if (isRH && renderCache && renderCache.dadosPorPeriodo[c.label] && c.datasetIndex < LOJAS.length) {
+                                            const f = renderCache.dadosPorPeriodo[c.label].func_count[c.datasetIndex];
+                                            if (f !== undefined) suffix = ` (${f} func)`;
+                                        }
+                                        return c.dataset.label + suffix + ': ' + (formatR$?'R$ '+c.raw.toLocaleString('pt-BR',{minimumFractionDigits:2}):c.raw.toFixed(2)+'%');
+                                    }
+                                }
+                            }
+                        } 
+                    }
+                });
             };
+
+            renderEvo('evoCustoRHChart', 'evoCustoRH', 'custo_rh_fat', 'custo_rh_fat', false, true);
+            renderEvo('evoCustoFuncChart', 'evoCustoFunc', 'custo_cabeca', 'custo_cabeca', true, true);
+            renderEvo('evoRoiChart', 'evoRoi', 'roi_pessoal', 'roi_pessoal', true, true);
 
             renderEvo('evoAlimChart', 'evoAlim', 'alim_func', 'alim_func', true);
             renderEvo('evoCombChart', 'evoComb', 'comb', 'comb', false);
@@ -820,26 +1138,24 @@
         }
 
         function prepararEImprimirPDF() {
-            document.getElementById('tab-analise').classList.remove('hidden');
+            document.getElementById('tab-despesas').classList.remove('hidden');
+            document.getElementById('tab-pessoal').classList.remove('hidden');
             document.getElementById('tab-comparativo').classList.remove('hidden');
             document.getElementById('tab-projecao').classList.remove('hidden');
+            
             for (let key in charts) { if (charts[key]) charts[key].resize(); }
+            
             setTimeout(() => {
                 window.print();
                 
+                const isPes = document.getElementById('btn-tab-pessoal').classList.contains('active');
                 const isComp = document.getElementById('btn-tab-comparativo').classList.contains('active');
                 const isProj = document.getElementById('btn-tab-projecao').classList.contains('active');
                 
-                if (isComp) {
-                    document.getElementById('tab-analise').classList.add('hidden');
-                    document.getElementById('tab-projecao').classList.add('hidden');
-                } else if (isProj) {
-                    document.getElementById('tab-analise').classList.add('hidden');
-                    document.getElementById('tab-comparativo').classList.add('hidden');
-                } else {
-                    document.getElementById('tab-comparativo').classList.add('hidden');
-                    document.getElementById('tab-projecao').classList.add('hidden');
-                }
+                if (isPes) switchTab('pessoal');
+                else if (isComp) switchTab('comparativo');
+                else if (isProj) switchTab('projecao');
+                else switchTab('despesas');
 
                 setTimeout(() => { for (let key in charts) { if (charts[key]) charts[key].resize(); } }, 100);
             }, 350);
@@ -910,19 +1226,20 @@
     <script src="https://cdn.tailwindcss.com">${closeScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js">${closeScript}
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js">${closeScript}
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0">${closeScript}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>body{background:#f1f5f9;font-family:'Segoe UI',sans-serif;color:#334155}.card{background:#fff;border-radius:6px;padding:1.5rem;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05);margin-bottom:1.5rem}.tab-btn{padding:.75rem 1.5rem;font-weight:600;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;color:#64748b}.tab-btn:hover{color:#1e293b}.tab-btn.active{border-bottom-color:#3b82f6;color:#2563eb}</style>
     <style>
         @media print {
             body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 24px !important; display: block !important; width: 100% !important; }
-            .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
+            .kpi-container { display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 16px !important; margin-bottom: 24px !important; }
             .print-charts-container { display: block !important; width: 100% !important; }
             .print-charts-container > .card { width: 100% !important; display: block !important; }
             .relative.h-64, .relative.h-80, .relative.h-96 { height: 280px !important; width: 100% !important; }
             canvas { max-width: 100% !important; max-height: 100% !important; width: 100% !important; height: 100% !important; object-fit: contain; }
             .print-page-break { page-break-before: always !important; break-before: page !important; padding-top: 20px; border-top: none !important; }
-            #tab-analise, #tab-comparativo, #tab-projecao { display: block !important; }
+            #tab-despesas, #tab-pessoal, #tab-comparativo, #tab-projecao { display: block !important; }
             .tabs-nav { display: none !important; }
             @page { size: A4 portrait; margin: 10mm; }
             .no-print { display: none !important; }
@@ -960,7 +1277,14 @@
     let renderCache = calcData;
     const colors = { blue: '#3b82f6', red: '#ef4444', green: '#10b981', amber: '#f59e0b', rose: '#f43f5e', emerald: '#10b981', slate: '#1e293b' };
     let charts = {};
-    try { if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); } catch(e){}
+    
+    try { 
+        if (typeof chartjsPluginAnnotation !== 'undefined') Chart.register(chartjsPluginAnnotation); 
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+            Chart.defaults.set('plugins.datalabels', { display: false });
+        }
+    } catch(e){}
 
     ${setText.toString()}
     ${limparNumero.toString()}
@@ -982,7 +1306,8 @@
 
     window.onload = () => { 
         document.getElementById('dashboard-container').classList.remove('hidden');
-        if(document.getElementById('tab-analise') && !document.getElementById('tab-analise').classList.contains('hidden')) atualizarDashboard();
+        if(document.getElementById('tab-despesas') && !document.getElementById('tab-despesas').classList.contains('hidden')) atualizarDashboard();
+        if(document.getElementById('tab-pessoal') && !document.getElementById('tab-pessoal').classList.contains('hidden')) atualizarDashboard();
         if(document.getElementById('tab-comparativo') && !document.getElementById('tab-comparativo').classList.contains('hidden')) atualizarAbaComparativa();
         if(document.getElementById('tab-projecao') && !document.getElementById('tab-projecao').classList.contains('hidden')) atualizarAbaProjecoes();
     };
